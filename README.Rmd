@@ -1,0 +1,455 @@
+---
+title: "swjm: Stagewise Variable Selection for Joint Models of Semi-Competing Risks"
+output:
+  github_document:
+    toc: true
+    toc_depth: 3
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment  = "#>",
+  fig.path = "man/figures/README-",
+  fig.width = 8,
+  fig.height = 5
+)
+set.seed(1)
+```
+
+## Overview
+
+`swjm` implements stagewise (forward-stepwise) variable selection for joint
+models of recurrent events and terminal events (semi-competing risks). Two
+model frameworks are supported:
+
+| Model | Type | `alpha` (first *p*) | `beta` (second *p*) |
+|-------|------|---------------------|----------------------|
+| **JFM** | Cox frailty | recurrence/readmission | terminal/death |
+| **JSCM** | Scale-change (AFT) | recurrence/readmission | terminal/death |
+
+Three penalty types are available: cooperative lasso (`"coop"`), lasso
+(`"lasso"`), and group lasso (`"group"`). The cooperative lasso encourages
+shared support between the readmission and death coefficient vectors.
+
+## Installation
+
+```{r install, eval = FALSE}
+# From the package directory:
+devtools::install("swjm")
+```
+
+## Data format
+
+All functions expect a data frame with columns `id`, `t.start`, `t.stop`,
+`event` (1 = readmission, 0 = terminal/censoring row), `status` (1 = death,
+0 = alive/censored), and covariate columns `x1, ..., xp`.
+
+---
+
+## Workflow
+
+### 1. Simulate data
+
+```{r simulate}
+library(swjm)
+
+# Joint Frailty Model — scenario 1
+set.seed(42)
+dat_jfm  <- generate_data(n = 200, p = 100, scenario = 1, model = "jfm")
+Data_jfm <- dat_jfm$data
+
+cat(sprintf(
+  "JFM data: n = %d subjects, %d readmission events, %d deaths\n",
+  length(unique(Data_jfm$id)),
+  sum(Data_jfm$event),
+  sum(Data_jfm$status)
+))
+
+# JSCM — same scenario
+set.seed(42)
+dat_jscm  <- generate_data(n = 200, p = 100, scenario = 1, model = "jscm")
+Data_jscm <- dat_jscm$data
+```
+
+### 2. Fit the stagewise regularization path
+
+```{r stagewise}
+fit_jfm <- stagewise_fit(Data_jfm, model = "jfm", penalty = "coop")
+fit_jfm
+```
+
+The fit object now exposes `alpha` (readmission) and `beta` (death) as
+separate *p* × (*k*+1) matrices — one column per stagewise step — in addition
+to the combined `theta` matrix (2*p* × (*k*+1)):
+
+```{r path-matrices}
+p <- 100
+cat("alpha matrix:", nrow(fit_jfm$alpha), "rows x", ncol(fit_jfm$alpha),
+    "columns\n")
+cat("beta  matrix:", nrow(fit_jfm$beta),  "rows x", ncol(fit_jfm$beta),
+    "columns\n")
+
+# Nonzero readmission coefficients at the final step
+k_final <- ncol(fit_jfm$alpha)
+cat("Nonzero alpha entries at final step:\n")
+a_final <- round(fit_jfm$alpha[, k_final], 4)
+print(a_final[a_final != 0])
+```
+
+`summary()` shows a compact table of path-end coefficients with variable type
+(shared, readmission-only, or death-only):
+
+```{r path-summary}
+summary(fit_jfm)
+```
+
+### 3. Plot the coefficient path
+
+`plot()` produces a glmnet-style coefficient trajectory plot with the number
+of active variables on the top axis:
+
+```{r plot-path, fig.height = 7}
+plot(fit_jfm)
+```
+
+### 4. Cross-validation to select the tuning parameter
+
+`cv_stagewise()` evaluates a cross-fitted estimating-equation score norm over
+a grid of lambda values.
+
+```{r cv, cache = TRUE}
+lambda_path <- fit_jfm$lambda
+dec_idx     <- swjm:::extract_decreasing_indices(lambda_path)
+lambda_seq  <- lambda_path[dec_idx]
+
+cv_jfm <- cv_stagewise(
+  Data_jfm, model = "jfm", penalty = "coop",
+  lambda_seq = lambda_seq, K = 3L
+)
+cv_jfm
+```
+
+The CV object stores `alpha` and `beta` at the optimal lambda, plus
+`n_active_alpha`, `n_active_beta`, and `n_active` variable-count vectors
+across the full lambda grid.
+
+### 5. Plot the cross-validation results
+
+```{r plot-cv}
+plot(cv_jfm)
+```
+
+### 6. Summarize the chosen model
+
+```{r coef-summary}
+# summary() shows a formatted table of selected coefficients
+summary(cv_jfm)
+```
+
+Direct access to selected coefficients:
+
+```{r direct-coef}
+cat("Selected readmission (alpha) variables:", which(cv_jfm$alpha != 0), "\n")
+cat("Selected death (beta) variables:       ", which(cv_jfm$beta  != 0), "\n")
+
+# coef() returns the combined numeric vector c(alpha, beta) for compatibility
+theta_best <- coef(cv_jfm)
+```
+
+### 7. Baseline hazard
+
+`baseline_hazard()` evaluates the cumulative baseline hazards at any desired
+time points (Breslow for JFM; Nelson-Aalen on the accelerated scale for JSCM):
+
+```{r baseline}
+bh <- baseline_hazard(cv_jfm, times = c(0.5, 1.0, 2.0, 4.0, 6.0))
+print(bh)
+```
+
+### 8. Predict survival curves
+
+`predict()` computes subject-specific readmission-free and death-free survival
+curves, together with the per-predictor contributions to each linear
+predictor:
+
+```{r predict}
+# Three hypothetical new subjects (covariate vectors of length p = 100)
+set.seed(7)
+newz <- matrix(rnorm(300), nrow = 3, ncol = 100)
+colnames(newz) <- paste0("x", 1:100)
+
+pred <- predict(cv_jfm, newdata = newz)
+pred
+
+# S_re: readmission-free survival — first 10 time points
+round(pred$S_re[, 1:10], 3)
+
+# Predictor contributions for subject 1 — show only nonzero entries
+contrib1 <- round(pred$contrib_re[1, ], 3)
+contrib1[contrib1 != 0]
+```
+
+### 9. Plot survival curves and predictor contributions
+
+`plot()` on a `swjm_pred` object draws four panels: survival curves for both
+processes (all subjects in grey, highlighted subject in color) plus bar
+charts of predictor contributions for the selected subject.
+
+```{r plot-pred, fig.height = 7}
+plot(pred, which_subject = 1)
+```
+
+---
+
+### 10. JSCM workflow (cross-validation + survival prediction)
+
+The same workflow applies to the JSCM.  `baseline_hazard()` and `predict()`
+now work for both models: for JSCM, survival curves are estimated via a
+Nelson-Aalen baseline on the accelerated time scale.  In the AFT
+interpretation, $e^{\hat\alpha^\top z_i}$ is the time-acceleration factor for
+subject $i$: greater than 1 means events happen sooner, less than 1 means
+later.
+
+```{r cv-jscm, cache = TRUE}
+fit_jscm <- stagewise_fit(Data_jscm, model = "jscm", penalty = "coop")
+
+lambda_path_jscm <- fit_jscm$lambda
+dec_idx_jscm     <- swjm:::extract_decreasing_indices(lambda_path_jscm)
+lambda_seq_jscm  <- lambda_path_jscm[dec_idx_jscm]
+
+cv_jscm <- cv_stagewise(
+  Data_jscm, model = "jscm", penalty = "coop",
+  lambda_seq = lambda_seq_jscm, K = 3L
+)
+summary(cv_jscm)
+```
+
+```{r predict-jscm}
+set.seed(7)
+newz_jscm <- matrix(runif(600, -1, 1), nrow = 3, ncol = 100)
+
+pred_jscm <- predict(cv_jscm, newdata = newz_jscm)
+
+# Total time-acceleration factor per subject (recurrence process)
+cat("Recurrence time-acceleration factors:\n")
+print(round(pred_jscm$time_accel_re, 3))
+```
+
+`plot()` draws the same four-panel layout as for JFM: survival curves for
+both processes plus bar charts of log time-acceleration contributions.
+
+```{r plot-pred-jscm, fig.height = 8}
+plot(pred_jscm, which_subject = 1)
+```
+
+---
+
+### 11. Other penalties
+
+```{r other-penalties, eval = FALSE}
+fit_lasso <- stagewise_fit(Data_jfm, model = "jfm", penalty = "lasso")
+cv_lasso  <- cv_stagewise(Data_jfm, model = "jfm", penalty = "lasso", K = 3L)
+summary(cv_lasso)
+
+fit_group <- stagewise_fit(Data_jfm, model = "jfm", penalty = "group")
+cv_group  <- cv_stagewise(Data_jfm, model = "jfm", penalty = "group", K = 3L)
+summary(cv_group)
+```
+
+---
+
+## 12. Model evaluation
+
+### 12.1 Coefficient recovery
+
+Compare CV-optimal estimates to the true generating coefficients.
+Variables that are truly nonzero or were selected are shown; all others
+were correctly excluded.
+
+```{r coef-compare}
+p <- 100
+
+# JFM: variables of interest (true signal or selected)
+show_jfm <- sort(which(dat_jfm$alpha_true != 0 | cv_jfm$alpha != 0 |
+                       dat_jfm$beta_true  != 0 | cv_jfm$beta  != 0))
+
+coef_df <- data.frame(
+  variable   = paste0("x", show_jfm),
+  true_alpha = round(dat_jfm$alpha_true[show_jfm], 3),
+  est_alpha  = round(cv_jfm$alpha[show_jfm],       3),
+  true_beta  = round(dat_jfm$beta_true[show_jfm],  3),
+  est_beta   = round(cv_jfm$beta[show_jfm],        3)
+)
+colnames(coef_df) <- c("variable", "alpha_true", "alpha_est", "beta_true", "beta_est")
+print(coef_df, row.names = FALSE)
+
+cat(sprintf(
+  "\nJFM  alpha: TP=%d FP=%d FN=%d  |  beta: TP=%d FP=%d FN=%d\n",
+  sum(cv_jfm$alpha != 0 & dat_jfm$alpha_true != 0),
+  sum(cv_jfm$alpha != 0 & dat_jfm$alpha_true == 0),
+  sum(cv_jfm$alpha == 0 & dat_jfm$alpha_true != 0),
+  sum(cv_jfm$beta  != 0 & dat_jfm$beta_true  != 0),
+  sum(cv_jfm$beta  != 0 & dat_jfm$beta_true  == 0),
+  sum(cv_jfm$beta  == 0 & dat_jfm$beta_true  != 0)))
+```
+
+```{r coef-compare-jscm}
+show_jscm <- sort(which(dat_jscm$alpha_true != 0 | cv_jscm$alpha != 0 |
+                        dat_jscm$beta_true  != 0 | cv_jscm$beta  != 0))
+
+coef_jscm <- data.frame(
+  variable   = paste0("x", show_jscm),
+  true_alpha = round(dat_jscm$alpha_true[show_jscm], 3),
+  est_alpha  = round(cv_jscm$alpha[show_jscm],        3),
+  true_beta  = round(dat_jscm$beta_true[show_jscm],  3),
+  est_beta   = round(cv_jscm$beta[show_jscm],         3)
+)
+colnames(coef_jscm) <- c("variable", "alpha_true", "alpha_est", "beta_true", "beta_est")
+print(coef_jscm, row.names = FALSE)
+
+cat(sprintf(
+  "\nJSCM alpha: TP=%d FP=%d FN=%d  |  beta: TP=%d FP=%d FN=%d\n",
+  sum(cv_jscm$alpha != 0 & dat_jscm$alpha_true != 0),
+  sum(cv_jscm$alpha != 0 & dat_jscm$alpha_true == 0),
+  sum(cv_jscm$alpha == 0 & dat_jscm$alpha_true != 0),
+  sum(cv_jscm$beta  != 0 & dat_jscm$beta_true  != 0),
+  sum(cv_jscm$beta  != 0 & dat_jscm$beta_true  == 0),
+  sum(cv_jscm$beta  == 0 & dat_jscm$beta_true  != 0)))
+```
+
+### 12.2 Time-varying AUC
+
+We use the `timeROC` package (Blanche et al., 2013) to compute
+cause-specific time-varying AUC in the competing-risk framework.
+Each subject contributes at most a first-readmission event (cause 1)
+and a death event (cause 2).  Each sub-model is assessed with its own
+linear predictor: $\hat\alpha^\top z_i$ for readmission,
+$\hat\beta^\top z_i$ for death.
+
+> **Note**: AUC is evaluated on the training data for illustration.
+> In practice use held-out or cross-validated predictions.
+
+```{r auc-prep}
+# Construct competing-risk dataset:
+# Keep first readmission (event==1 & t.start==0) + death/censor (event==0).
+# Status: 1 = first readmission, 2 = death, 0 = censored.
+.cr_data <- function(Data) {
+  d3 <- Data[Data$event == 0 | (Data$event == 1 & Data$t.start == 0), ]
+  d3 <- d3[order(d3$id, d3$t.start, d3$t.stop), ]
+  status <- ifelse(d3$event == 1 & d3$status == 0, 1L,
+             ifelse(d3$event == 0 & d3$status == 0, 0L, 2L))
+  list(data = d3, status = status)
+}
+
+cr_jfm  <- .cr_data(Data_jfm)
+cr_jscm <- .cr_data(Data_jscm)
+
+# Baseline covariates (one row per subject)
+Z_jfm  <- as.matrix(Data_jfm[!duplicated(Data_jfm$id),   paste0("x", 1:p)])
+Z_jscm <- as.matrix(Data_jscm[!duplicated(Data_jscm$id), paste0("x", 1:p)])
+
+# Markers expanded to row level: alpha^T z for readmission, beta^T z for death
+M_re_jfm  <- drop(Z_jfm  %*% cv_jfm$alpha)[cr_jfm$data$id]
+M_de_jfm  <- drop(Z_jfm  %*% cv_jfm$beta)[cr_jfm$data$id]
+M_re_jscm <- drop(Z_jscm %*% cv_jscm$alpha)[cr_jscm$data$id]
+M_de_jscm <- drop(Z_jscm %*% cv_jscm$beta)[cr_jscm$data$id]
+```
+
+```{r auc, cache = TRUE}
+if (!requireNamespace("timeROC", quietly = TRUE))
+  install.packages("timeROC")
+library(survival)
+library(timeROC)
+
+# Evaluation grid: 20 points spanning the 10th-85th percentile of event times
+.tgrid <- function(t_vec, status, n = 20) {
+  t_ev <- t_vec[status > 0]
+  seq(quantile(t_ev, 0.10), quantile(t_ev, 0.85), length.out = n)
+}
+
+t_jfm  <- .tgrid(cr_jfm$data$t.stop,  cr_jfm$status)
+t_jscm <- .tgrid(cr_jscm$data$t.stop, cr_jscm$status)
+
+# Readmission AUC: alpha^T z marker, cause = 1
+roc_re_jfm <- timeROC(T = cr_jfm$data$t.stop, delta = cr_jfm$status,
+                       marker = M_re_jfm, cause = 1, weighting = "marginal",
+                       times = t_jfm, ROC = FALSE, iid = FALSE)
+roc_re_jscm <- timeROC(T = cr_jscm$data$t.stop, delta = cr_jscm$status,
+                        marker = M_re_jscm, cause = 1, weighting = "marginal",
+                        times = t_jscm, ROC = FALSE, iid = FALSE)
+
+# Death AUC: beta^T z marker, cause = 2
+roc_de_jfm <- timeROC(T = cr_jfm$data$t.stop, delta = cr_jfm$status,
+                       marker = M_de_jfm, cause = 2, weighting = "marginal",
+                       times = t_jfm, ROC = FALSE, iid = FALSE)
+roc_de_jscm <- timeROC(T = cr_jscm$data$t.stop, delta = cr_jscm$status,
+                        marker = M_de_jscm, cause = 2, weighting = "marginal",
+                        times = t_jscm, ROC = FALSE, iid = FALSE)
+```
+
+```{r auc-plot, fig.height = 5}
+.get_auc <- function(roc, cause) {
+  auc <- roc[[paste0("AUC_", cause)]]
+  if (is.null(auc)) auc <- roc$AUC
+  if (is.null(auc) || !is.numeric(auc)) return(rep(NA_real_, length(roc$times)))
+  if (length(auc) == length(roc$times) + 1) auc <- auc[-1]
+  as.numeric(auc)
+}
+
+old_par <- par(mfrow = c(1, 2), mar = c(4.5, 4, 3, 1))
+
+plot(t_jfm, .get_auc(roc_re_jfm, 1), type = "l", lwd = 2, col = "steelblue",
+     xlab = "Time", ylab = "AUC(t)", main = "JFM", ylim = c(0.4, 1))
+lines(t_jfm, .get_auc(roc_de_jfm, 2), lwd = 2, col = "tomato", lty = 2)
+abline(h = 0.5, lty = 3, col = "grey60")
+legend("bottomleft", c("Readmission", "Death"),
+       col = c("steelblue", "tomato"), lwd = 2, lty = c(1, 2),
+       bty = "n", cex = 0.85)
+
+plot(t_jscm, .get_auc(roc_re_jscm, 1), type = "l", lwd = 2, col = "steelblue",
+     xlab = "Time", ylab = "AUC(t)", main = "JSCM", ylim = c(0.4, 1))
+lines(t_jscm, .get_auc(roc_de_jscm, 2), lwd = 2, col = "tomato", lty = 2)
+abline(h = 0.5, lty = 3, col = "grey60")
+legend("bottomleft", c("Readmission", "Death"),
+       col = c("steelblue", "tomato"), lwd = 2, lty = c(1, 2),
+       bty = "n", cex = 0.85)
+
+par(old_par)
+```
+
+---
+
+## Package conventions
+
+- **`theta`** is always stored as `c(alpha, beta)`:
+  `theta[1:p]` = `alpha` (readmission), `theta[(p+1):(2p)]` = `beta` (death).
+  This holds for both the JFM and JSCM.
+- `stagewise_fit()` also returns `alpha` and `beta` as separate *p* × (*k*+1)
+  matrices for convenient access to the full regularization path.
+- `cv_stagewise()` stores `alpha` and `beta` at the CV-optimal lambda, plus
+  variable-count vectors `n_active_alpha`, `n_active_beta`, `n_active`.
+- **Baseline hazards**: stored in `cv$baseline` and accessible via
+  `baseline_hazard(cv, times)`.  Works for both models: Breslow estimator
+  for JFM; Nelson-Aalen on the accelerated time scale for JSCM.
+  Used internally by `predict()`.
+- **Survival prediction**: `predict(cv, newdata)` works for both models and
+  returns a `swjm_pred` object with `S_re`, `S_de` (survival matrices),
+  linear predictors `lp_re`, `lp_de`, and predictor-contribution matrices
+  `contrib_re`, `contrib_de` ($\hat\alpha_j z_{ij}$ and $\hat\beta_j z_{ij}$).
+  - **JFM**: contributions are log-hazard-ratio contributions (positive =
+    higher risk).
+  - **JSCM**: also returns `time_accel_re` and `time_accel_de`
+    ($e^{\hat\alpha^\top z_i}$, $e^{\hat\beta^\top z_i}$) — the multiplicative
+    factors by which each subject's event times are scaled relative to baseline.
+    Contributions $\hat\alpha_j z_{ij}$ are log time-acceleration contributions:
+    $e^{\hat\alpha_j z_{ij}} > 1$ shortens event times; $< 1$ lengthens them.
+- The **cooperative lasso** norm penalizes each variable pair
+  `(alpha_j, beta_j)` with the L2 norm when signs agree, and L1 when they
+  disagree — encouraging variables that affect both processes to enter
+  together with the same sign.
+- **Gradient scaling**: at each step the death gradient is scaled up so that
+  both sub-models contribute comparably to the penalty norm.
+- **Adaptive step size**: the step size at each iteration is set to one order
+  of magnitude smaller than the current dual norm, which avoids overly large
+  updates.

@@ -1,0 +1,33 @@
+Package: swjm
+Title: Stagewise Variable Selection for Joint Models of Semi-Competing Risks
+Version: 0.1.0
+Authors@R: c(
+    person("Huo", "Lingfeng", role = c("aut", "cre"),
+           email = "huol@example.com"),
+    person("Huling", "Jared", role = "aut"))
+Description: Implements stagewise regression for variable selection in joint
+    models of recurrent events and terminal events (semi-competing risks).
+    Supports two model frameworks: the joint frailty model (Cox-type) and the
+    joint scale-change model (AFT-type). Provides cooperative lasso, lasso, and
+    group lasso penalties with cross-validation for tuning parameter selection
+    via cross-fitted estimating equations.
+License: GPL (>= 3)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+LinkingTo:
+    Rcpp,
+    RcppArmadillo
+Imports:
+    Rcpp,
+    Matrix,
+    stats,
+    reReg
+Suggests:
+    testthat (>= 3.0.0),
+    survival,
+    timeROC,
+    knitr,
+    rmarkdown
+Config/testthat/edition: 3
+VignetteBuilder: knitr
