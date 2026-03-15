@@ -156,7 +156,7 @@ summary.swjm_path <- function(object, ...) {
   .var_type <- function(j) {
     a <- alpha_end[j]; b <- beta_end[j]
     if (a != 0 && b != 0) {
-      if (sign(a) == sign(b)) "shared (+)" else "shared (–)"
+      if (sign(a) == sign(b)) "shared (+)" else "shared (\u2013)"
     } else if (a != 0) {
       "readmission only"
     } else {
@@ -198,7 +198,7 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
   list_recur <- dc$list_recur; num_recur <- dc$num_recur
   t.start <- dc$t.start; I <- dc$I
 
-  # Initialize alpha (recurrence) and beta (death) — consistent with JSCM
+  # Initialize alpha (recurrence) and beta (death) -- consistent with JSCM
   alpha <- initial_alpha
   beta <- initial_beta
 
@@ -215,7 +215,7 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
   Z_pseudo  <- pseudo_entries[, 3:ncol(pseudo_entries), drop = FALSE]
   td_sorted <- sort(td)
   # tr_id: 0-based subject index per recurrent event (for C++ score)
-  # td_id: same for death — computed after wt_death call above
+  # td_id: same for death -- computed after wt_death call above
   td_id0    <- td_id - 1L   # 0-based
 
   res_de <- jfm_s0s1_cpp(Y, wt_matrix, td_sorted, index_death_matrix,

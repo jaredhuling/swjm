@@ -3,3 +3,6 @@
 ^README\.Rmd$
 ^LICENSE\.md$
 ^\.github$
+^README_cache$
+^README\.html$
+^README_files$
