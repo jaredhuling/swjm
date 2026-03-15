@@ -31,3 +31,4 @@ Suggests:
     rmarkdown
 Config/testthat/edition: 3
 VignetteBuilder: knitr
+URL: http://jaredhuling.org/swjm/

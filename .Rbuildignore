@@ -6,3 +6,6 @@
 ^README_cache$
 ^README\.html$
 ^README_files$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
