@@ -51,9 +51,9 @@
 
       <h1>Stagewise Variable Selection for Joint Semi-Competing Risk Models</h1>
                         <h4 data-toc-skip class="author">Lingfeng Huo,
-Jared Huling</h4>
+Ziren Jiang, Jue Hou, Jared D. Huling</h4>
             
-            <h4 data-toc-skip class="date">2026-03-15</h4>
+            <h4 data-toc-skip class="date">2026-03-16</h4>
       
 
       <div class="d-none name"><code>swjm.Rmd</code></div>
@@ -150,7 +150,8 @@ governs the terminal (death) process.</p>
 <div class="section level3">
 <h3 id="joint-frailty-model-jfm">1.2 Joint Frailty Model (JFM)<a class="anchor" aria-label="anchor" href="#joint-frailty-model-jfm"></a>
 </h3>
-<p>The JFM (Rondeau et al., 2007) introduces a subject-specific frailty
+<p>The JFM (Kalbfleisch et al., 2013) introduces a subject-specific
+frailty
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>ω</mi><mi>i</mi></msub><mo>∼</mo><mtext mathvariant="normal">Gamma</mtext><mrow><mo stretchy="true" form="prefix">(</mo><mi>κ</mi><mo>,</mo><mi>κ</mi><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">\omega_i \sim \text{Gamma}(\kappa, \kappa)</annotation></semantics></math>
 that links the two processes:</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msup><mi>λ</mi><mi>R</mi></msup><mrow><mo stretchy="true" form="prefix">(</mo><mi>t</mi><mo>∣</mo><msub><mi>Z</mi><mi>i</mi></msub><mo>,</mo><msub><mi>ω</mi><mi>i</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><msubsup><mi>λ</mi><mn>0</mn><mi>R</mi></msubsup><mrow><mo stretchy="true" form="prefix">(</mo><mi>t</mi><mo stretchy="true" form="postfix">)</mo></mrow><mspace width="0.167em"></mspace><msup><mi>e</mi><mrow><msup><mi>α</mi><mi>⊤</mi></msup><msub><mi>Z</mi><mi>i</mi></msub><mrow><mo stretchy="true" form="prefix">(</mo><mi>t</mi><mo stretchy="true" form="postfix">)</mo></mrow></mrow></msup><mspace width="0.167em"></mspace><msub><mi>ω</mi><mi>i</mi></msub><mo>,</mo><mspace width="2.0em"></mspace><msup><mi>λ</mi><mi>D</mi></msup><mrow><mo stretchy="true" form="prefix">(</mo><mi>t</mi><mo>∣</mo><msub><mi>Z</mi><mi>i</mi></msub><mo>,</mo><msub><mi>ω</mi><mi>i</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><msubsup><mi>λ</mi><mn>0</mn><mi>D</mi></msubsup><mrow><mo stretchy="true" form="prefix">(</mo><mi>t</mi><mo stretchy="true" form="postfix">)</mo></mrow><mspace width="0.167em"></mspace><msup><mi>e</mi><mrow><msup><mi>β</mi><mi>⊤</mi></msup><msub><mi>Z</mi><mi>i</mi></msub></mrow></msup><mspace width="0.167em"></mspace><msubsup><mi>ω</mi><mi>i</mi><mi>η</mi></msubsup><mo>,</mo></mrow><annotation encoding="application/x-tex">
@@ -327,7 +328,7 @@ supports time-varying covariates; JSCM uses the baseline values from the
 <p><code><a href="../reference/generate_data.html">generate_data()</a></code> is a unified data-generation interface
 for both models.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="http://jaredhuling.org/swjm/">swjm</a></span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va">swjm</span><span class="op">)</span></span></code></pre></div>
 <div class="section level3">
 <h3 id="joint-frailty-model-data">4.1 Joint Frailty Model data<a class="anchor" aria-label="anchor" href="#joint-frailty-model-data"></a>
 </h3>
@@ -441,7 +442,7 @@ decreases from a large value (all coefficients zero) to a small value
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;   Covariates (p):            10</span></span>
 <span><span class="co">#&gt;   Iterations:                5000</span></span>
-<span><span class="co">#&gt;   Lambda range:              [9.671e-05, 1.351]</span></span>
+<span><span class="co">#&gt;   Lambda range:              [9.844e-05, 1.351]</span></span>
 <span><span class="co">#&gt;   Active at final step:      10 readmission, 7 death</span></span>
 <span><span class="co">#&gt;     Readmission (alpha): 1, 2, 3, 4, 5, 6, 7, 8, 9, 10</span></span>
 <span><span class="co">#&gt;     Death (beta):        1, 3, 4, 6, 8, 9, 10</span></span></code></pre></div>
@@ -512,7 +513,7 @@ combined matrix (<code>rbind(alpha, beta)</code>)</td>
 <span><span class="co"># Lambda range</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"Lambda range: [%.4g, %.4g]\n"</span>,</span>
 <span>            <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">min</a></span><span class="op">(</span><span class="va">fit_jfm</span><span class="op">$</span><span class="va">lambda</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">fit_jfm</span><span class="op">$</span><span class="va">lambda</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Lambda range: [9.671e-05, 1.351]</span></span>
+<span><span class="co">#&gt; Lambda range: [9.844e-05, 1.351]</span></span>
 <span></span>
 <span><span class="co"># Active (nonzero) variables at the final step</span></span>
 <span><span class="va">active_final</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/which.html" class="external-link">which</a></span><span class="op">(</span><span class="va">fit_jfm</span><span class="op">$</span><span class="va">alpha</span><span class="op">[</span>, <span class="va">k</span><span class="op">]</span> <span class="op">!=</span> <span class="fl">0</span> <span class="op">|</span></span>
@@ -525,8 +526,8 @@ combined matrix (<code>rbind(alpha, beta)</code>)</td>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; alpha at final step:</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">fit_jfm</span><span class="op">$</span><span class="va">alpha</span><span class="op">[</span>, <span class="va">k</span><span class="op">]</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;  [1]  1.1859 -1.0916  0.1694 -0.0386 -0.0320  0.0487  0.0025  0.0112  0.9737</span></span>
-<span><span class="co">#&gt; [10] -0.9999</span></span></code></pre></div>
+<span><span class="co">#&gt;  [1]  1.1860 -1.0916  0.1692 -0.0388 -0.0320  0.0480  0.0025  0.0112  0.9638</span></span>
+<span><span class="co">#&gt; [10] -1.0099</span></span></code></pre></div>
 <p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> shows a compact table of path-end coefficients
 annotated with variable type (shared, readmission-only, or
 death-only):</p>
@@ -534,22 +535,22 @@ death-only):</p>
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">fit_jfm</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Stagewise path (jfm/coop)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;   p = 10  |  5000 iterations  |  lambda: [9.671e-05, 1.351]</span></span>
-<span><span class="co">#&gt;   Decreasing path: 1688 steps</span></span>
+<span><span class="co">#&gt;   p = 10  |  5000 iterations  |  lambda: [9.844e-05, 1.351]</span></span>
+<span><span class="co">#&gt;   Decreasing path: 1677 steps</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;   Path-end coefficients (nonzero variables):</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;   Variable    alpha       beta        Type</span></span>
 <span><span class="co">#&gt;   ----------  ----------  ----------  ----------------</span></span>
-<span><span class="co">#&gt;   x10         -0.9999     -0.8829     shared (+)</span></span>
-<span><span class="co">#&gt;   x3          +0.1694     +0.9977     shared (+)</span></span>
-<span><span class="co">#&gt;   x9          +0.9737     +0.9110     shared (+)</span></span>
-<span><span class="co">#&gt;   x1          +1.1859     +0.0074     shared (+)</span></span>
+<span><span class="co">#&gt;   x10         -1.0099     -0.8857     shared (+)</span></span>
+<span><span class="co">#&gt;   x3          +0.1692     +0.9785     shared (+)</span></span>
+<span><span class="co">#&gt;   x9          +0.9638     +0.9115     shared (+)</span></span>
+<span><span class="co">#&gt;   x1          +1.1860     +0.0069     shared (+)</span></span>
 <span><span class="co">#&gt;   x2          -1.0916          —    readmission only</span></span>
-<span><span class="co">#&gt;   x4          -0.0386     -0.9092     shared (+)</span></span>
-<span><span class="co">#&gt;   x6          +0.0487     -0.0908     shared (–)</span></span>
+<span><span class="co">#&gt;   x4          -0.0388     -0.8920     shared (+)</span></span>
+<span><span class="co">#&gt;   x6          +0.0480     -0.0756     shared (–)</span></span>
 <span><span class="co">#&gt;   x5          -0.0320          —    readmission only</span></span>
-<span><span class="co">#&gt;   x8          +0.0112     -0.0543     shared (–)</span></span>
+<span><span class="co">#&gt;   x8          +0.0112     -0.0380     shared (–)</span></span>
 <span><span class="co">#&gt;   x7          +0.0025          —    readmission only</span></span></code></pre></div>
 </div>
 <div class="section level3">
@@ -586,7 +587,7 @@ grid to the <strong>strictly decreasing</strong> portion of the path
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span><span class="st">"Full path: %d steps; decreasing path: %d steps\n"</span>,</span>
 <span>            <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">lambda_path</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/length.html" class="external-link">length</a></span><span class="op">(</span><span class="va">lambda_seq</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; Full path: 5001 steps; decreasing path: 1688 steps</span></span>
+<span><span class="co">#&gt; Full path: 5001 steps; decreasing path: 1677 steps</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">cv_jfm</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/cv_stagewise.html">cv_stagewise</a></span><span class="op">(</span></span>
@@ -600,8 +601,8 @@ grid to the <strong>strictly decreasing</strong> portion of the path
 <span><span class="co">#&gt; Cross-validation (jfm/coop)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;   Covariates (p):              10</span></span>
-<span><span class="co">#&gt;   Lambda grid size:            1688</span></span>
-<span><span class="co">#&gt;   Best position (combined):    1688  (lambda = 9.671e-05)</span></span>
+<span><span class="co">#&gt;   Lambda grid size:            1677</span></span>
+<span><span class="co">#&gt;   Best position (combined):    1677  (lambda = 9.844e-05)</span></span>
 <span><span class="co">#&gt;   Selected variables:          10 readmission, 7 death</span></span>
 <span><span class="co">#&gt;     Readmission (alpha): 1, 2, 3, 4, 5, 6, 7, 8, 9, 10</span></span>
 <span><span class="co">#&gt;     Death (beta):        1, 3, 4, 6, 8, 9, 10</span></span></code></pre></div>
@@ -712,28 +713,28 @@ dotted). The vertical dashed line marks the optimal
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Nonzero beta:</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">cv_jfm</span><span class="op">$</span><span class="va">beta</span><span class="op">[</span><span class="va">cv_jfm</span><span class="op">$</span><span class="va">beta</span> <span class="op">!=</span> <span class="fl">0</span><span class="op">]</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1]  0.0074  0.9647 -0.8552 -0.0398 -0.0053  0.9099 -0.8829</span></span></code></pre></div>
+<span><span class="co">#&gt; [1]  0.0074  0.9695 -0.8580 -0.0417 -0.0070  0.9115 -0.8848</span></span></code></pre></div>
 <p><code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code> shows a formatted table with the CV-optimal
 coefficients:</p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">cv_jfm</span><span class="op">)</span></span>
 <span><span class="co">#&gt; CV-selected model (jfm/coop)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;   p = 10  |  Lambda grid: 1688 steps  |  CV optimal: step 1688 (lambda = 9.671e-05)</span></span>
+<span><span class="co">#&gt;   p = 10  |  Lambda grid: 1677 steps  |  CV optimal: step 1677 (lambda = 9.844e-05)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;   Selected coefficients  (10 readmission, 7 death):</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;   Variable    alpha       beta        Type</span></span>
 <span><span class="co">#&gt;   ----------  ----------  ----------  ----------------</span></span>
-<span><span class="co">#&gt;   x10         -0.9999     -0.8829     shared (+)</span></span>
-<span><span class="co">#&gt;   x9          +0.9638     +0.9099     shared (+)</span></span>
+<span><span class="co">#&gt;   x10         -0.9999     -0.8848     shared (+)</span></span>
+<span><span class="co">#&gt;   x9          +0.9638     +0.9115     shared (+)</span></span>
 <span><span class="co">#&gt;   x1          +1.1859     +0.0074     shared (+)</span></span>
-<span><span class="co">#&gt;   x3          +0.1692     +0.9647     shared (+)</span></span>
+<span><span class="co">#&gt;   x3          +0.1692     +0.9695     shared (+)</span></span>
 <span><span class="co">#&gt;   x2          -1.0916          —    readmission only</span></span>
-<span><span class="co">#&gt;   x4          -0.0384     -0.8552     shared (+)</span></span>
-<span><span class="co">#&gt;   x6          +0.0487     -0.0398     shared (–)</span></span>
+<span><span class="co">#&gt;   x4          -0.0384     -0.8580     shared (+)</span></span>
+<span><span class="co">#&gt;   x6          +0.0487     -0.0417     shared (–)</span></span>
 <span><span class="co">#&gt;   x5          -0.0320          —    readmission only</span></span>
-<span><span class="co">#&gt;   x8          +0.0112     -0.0053     shared (–)</span></span>
+<span><span class="co">#&gt;   x8          +0.0112     -0.0070     shared (–)</span></span>
 <span><span class="co">#&gt;   x7          +0.0025          —    readmission only</span></span></code></pre></div>
 <p><code><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef()</a></code> returns the combined
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2</mn><mi>p</mi></mrow><annotation encoding="application/x-tex">2p</annotation></semantics></math>-vector
@@ -753,11 +754,11 @@ used:</p>
 <code class="sourceCode R"><span><span class="va">bh</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/baseline_hazard.html">baseline_hazard</a></span><span class="op">(</span><span class="va">cv_jfm</span>, times <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1.0</span>, <span class="fl">2.0</span>, <span class="fl">4.0</span>, <span class="fl">6.0</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">bh</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   time cumhaz_readmission cumhaz_death</span></span>
-<span><span class="co">#&gt; 1  0.5          0.4977983   0.02441637</span></span>
-<span><span class="co">#&gt; 2  1.0          0.9806753   0.05595363</span></span>
-<span><span class="co">#&gt; 3  2.0          1.8873801   0.09071824</span></span>
-<span><span class="co">#&gt; 4  4.0          4.0971583   0.18970647</span></span>
-<span><span class="co">#&gt; 5  6.0          6.0595250   0.26811397</span></span></code></pre></div>
+<span><span class="co">#&gt; 1  0.5          0.4977984   0.02422675</span></span>
+<span><span class="co">#&gt; 2  1.0          0.9806756   0.05559379</span></span>
+<span><span class="co">#&gt; 3  2.0          1.8873802   0.09018160</span></span>
+<span><span class="co">#&gt; 4  4.0          4.0971585   0.18877560</span></span>
+<span><span class="co">#&gt; 5  6.0          6.0595254   0.26684196</span></span></code></pre></div>
 <p>To retrieve only one of the two processes:</p>
 <div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bh_re</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/baseline_hazard.html">baseline_hazard</a></span><span class="op">(</span><span class="va">cv_jfm</span>, times <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">5</span>, by <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>,</span>
@@ -765,11 +766,11 @@ used:</p>
 <span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">bh_re</span><span class="op">)</span></span>
 <span><span class="co">#&gt;   time cumhaz_readmission</span></span>
 <span><span class="co">#&gt; 1  0.0          0.0000000</span></span>
-<span><span class="co">#&gt; 2  0.5          0.4977983</span></span>
-<span><span class="co">#&gt; 3  1.0          0.9806753</span></span>
-<span><span class="co">#&gt; 4  1.5          1.3814991</span></span>
-<span><span class="co">#&gt; 5  2.0          1.8873801</span></span>
-<span><span class="co">#&gt; 6  2.5          2.4783701</span></span></code></pre></div>
+<span><span class="co">#&gt; 2  0.5          0.4977984</span></span>
+<span><span class="co">#&gt; 3  1.0          0.9806756</span></span>
+<span><span class="co">#&gt; 4  1.5          1.3814992</span></span>
+<span><span class="co">#&gt; 5  2.0          1.8873802</span></span>
+<span><span class="co">#&gt; 6  2.5          2.4783703</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="survival-prediction">5.8 Survival Prediction<a class="anchor" aria-label="anchor" href="#survival-prediction"></a>
@@ -1266,7 +1267,7 @@ decelerate them.</p>
 <span><span class="va">c1_de</span> <span class="op">&lt;-</span> <span class="va">pred</span><span class="op">$</span><span class="va">contrib_de</span><span class="op">[</span><span class="fl">1</span>, <span class="op">]</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">c1_de</span><span class="op">[</span><span class="va">c1_de</span> <span class="op">!=</span> <span class="fl">0</span><span class="op">]</span>, <span class="fl">4</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;      x1      x3      x4      x6      x8      x9     x10 </span></span>
-<span><span class="co">#&gt;  0.0170  0.7217 -1.8729 -0.0186 -0.0037  1.1583 -0.5224</span></span></code></pre></div>
+<span><span class="co">#&gt;  0.0168  0.7253 -1.8791 -0.0195 -0.0049  1.1602 -0.5236</span></span></code></pre></div>
 <hr>
 </div>
 </div>
@@ -1346,14 +1347,14 @@ were correctly excluded.</p>
 <span><span class="co">#&gt;  variable alpha_true alpha_est beta_true beta_est</span></span>
 <span><span class="co">#&gt;        x1        1.1     1.186       0.1    0.007</span></span>
 <span><span class="co">#&gt;        x2       -1.1    -1.092      -0.1    0.000</span></span>
-<span><span class="co">#&gt;        x3        0.1     0.169       1.1    0.965</span></span>
-<span><span class="co">#&gt;        x4       -0.1    -0.038      -1.1   -0.855</span></span>
+<span><span class="co">#&gt;        x3        0.1     0.169       1.1    0.969</span></span>
+<span><span class="co">#&gt;        x4       -0.1    -0.038      -1.1   -0.858</span></span>
 <span><span class="co">#&gt;        x5        0.0    -0.032       0.0    0.000</span></span>
-<span><span class="co">#&gt;        x6        0.0     0.049       0.0   -0.040</span></span>
+<span><span class="co">#&gt;        x6        0.0     0.049       0.0   -0.042</span></span>
 <span><span class="co">#&gt;        x7        0.0     0.003       0.0    0.000</span></span>
-<span><span class="co">#&gt;        x8        0.0     0.011       0.0   -0.005</span></span>
-<span><span class="co">#&gt;        x9        1.0     0.964       1.0    0.910</span></span>
-<span><span class="co">#&gt;       x10       -1.0    -1.000      -1.0   -0.883</span></span>
+<span><span class="co">#&gt;        x8        0.0     0.011       0.0   -0.007</span></span>
+<span><span class="co">#&gt;        x9        1.0     0.964       1.0    0.911</span></span>
+<span><span class="co">#&gt;       x10       -1.0    -1.000      -1.0   -0.885</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/sprintf.html" class="external-link">sprintf</a></span><span class="op">(</span></span>
 <span>  <span class="st">"\nJFM  alpha: TP=%d FP=%d FN=%d  |  beta: TP=%d FP=%d FN=%d\n"</span>,</span>
@@ -1509,17 +1510,19 @@ predictions.</p>
 <div class="section level2">
 <h2 id="references">11. References<a class="anchor" aria-label="anchor" href="#references"></a>
 </h2>
-<p>Rondeau, V., Mathoulin-Pelissier, S., Jacqmin-Gadda, H., Brouste, V.,
-and Soubeyran, P. (2007). Joint frailty models for recurring events and
-death using maximum penalized likelihood estimation: Application in
-transplantation. <em>Biostatistics</em>, <strong>8</strong>(4),
-708–721.</p>
+<p>Blanche, P., Dartigues, J.-F., and Jacqmin-Gadda, H. (2013).
+Estimating and comparing time-dependent areas under receiver operating
+characteristic curves for censored event times with competing risks.
+<em>Statistics in Medicine</em>, <strong>32</strong>(30), 5381–5397.</p>
+<p>Kalbfleisch, J. D., Schaubel, D. E., Ye, Y., and Gong, Q. (2013). An
+estimating function approach to the analysis of recurrent and terminal
+events. <em>Biometrics</em>, <strong>69</strong>(2), 366–374.</p>
 <p>Xu, G., Chiou, S. H., Huang, C.-Y., Wang, M.-C., and Yan, J. (2017).
 Joint scale-change models for recurrent events and failure time.
 <em>Journal of the American Statistical Association</em>,
 <strong>112</strong>(518), 794–805.</p>
-<p>Huo, L. and Huling, J. (2025). A stagewise selection framework for
-joint models for semi-competing risk prediction.
+<p>Huo, L., Jiang, Z., Hou, J., and Huling, J. D. (2025). A stagewise
+selection framework for joint models for semi-competing risk prediction.
 <em>Manuscript</em>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
@@ -1529,7 +1532,7 @@ joint models for semi-competing risk prediction.
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Huo Lingfeng, Huling Jared.</p>
+  <p>Developed by Huo Lingfeng, Jiang Ziren, Hou Jue, Huling Jared D..</p>
 </div>
 
 <div class="pkgdown-footer-right">

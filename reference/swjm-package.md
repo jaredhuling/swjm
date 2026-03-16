@@ -59,4 +59,8 @@ columns:
 
 Authors:
 
-- Huling Jared
+- Jiang Ziren
+
+- Hou Jue
+
+- Huling Jared D.

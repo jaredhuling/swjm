@@ -4,18 +4,21 @@
 
 - **Huo Lingfeng**. Author, maintainer.
 
-- **Huling Jared**. Author.
+- **Jiang Ziren**. Author.
+
+- **Hou Jue**. Author.
+
+- **Huling Jared D.**. Author.
 
 ## Citation
 
-Lingfeng H, Jared H (2026). *swjm: Stagewise Variable Selection for
-Joint Models of Semi-Competing Risks*. R package version 0.1.0,
-<http://jaredhuling.org/swjm/>.
+Lingfeng H, Ziren J, Jue H, Jared D. H (2026). *swjm: Stagewise Variable
+Selection for Joint Models of Semi-Competing Risks*. R package version
+0.1.0.
 
     @Manual{,
       title = {swjm: Stagewise Variable Selection for Joint Models of Semi-Competing Risks},
-      author = {Huo Lingfeng and Huling Jared},
+      author = {Huo Lingfeng and Jiang Ziren and Hou Jue and Huling {Jared D.}},
       year = {2026},
       note = {R package version 0.1.0},
-      url = {http://jaredhuling.org/swjm/},
     }

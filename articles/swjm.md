@@ -45,7 +45,7 @@ process.
 
 ### 1.2 Joint Frailty Model (JFM)
 
-The JFM (Rondeau et al., 2007) introduces a subject-specific frailty
+The JFM (Kalbfleisch et al., 2013) introduces a subject-specific frailty
 $\omega_{i} \sim \text{Gamma}(\kappa,\kappa)$ that links the two
 processes:
 
@@ -255,7 +255,7 @@ fit_jfm
 #> 
 #>   Covariates (p):            10
 #>   Iterations:                5000
-#>   Lambda range:              [9.671e-05, 1.351]
+#>   Lambda range:              [9.844e-05, 1.351]
 #>   Active at final step:      10 readmission, 7 death
 #>     Readmission (alpha): 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
 #>     Death (beta):        1, 3, 4, 6, 8, 9, 10
@@ -286,7 +286,7 @@ cat("Path length:", k, "steps\n")
 # Lambda range
 cat(sprintf("Lambda range: [%.4g, %.4g]\n",
             min(fit_jfm$lambda), max(fit_jfm$lambda)))
-#> Lambda range: [9.671e-05, 1.351]
+#> Lambda range: [9.844e-05, 1.351]
 
 # Active (nonzero) variables at the final step
 active_final <- which(fit_jfm$alpha[, k] != 0 |
@@ -299,8 +299,8 @@ cat("\nalpha at final step:\n")
 #> 
 #> alpha at final step:
 print(round(fit_jfm$alpha[, k], 4))
-#>  [1]  1.1859 -1.0916  0.1694 -0.0386 -0.0320  0.0487  0.0025  0.0112  0.9737
-#> [10] -0.9999
+#>  [1]  1.1860 -1.0916  0.1692 -0.0388 -0.0320  0.0480  0.0025  0.0112  0.9638
+#> [10] -1.0099
 ```
 
 [`summary()`](https://rdrr.io/r/base/summary.html) shows a compact table
@@ -311,22 +311,22 @@ readmission-only, or death-only):
 summary(fit_jfm)
 #> Stagewise path (jfm/coop)
 #> 
-#>   p = 10  |  5000 iterations  |  lambda: [9.671e-05, 1.351]
-#>   Decreasing path: 1688 steps
+#>   p = 10  |  5000 iterations  |  lambda: [9.844e-05, 1.351]
+#>   Decreasing path: 1677 steps
 #> 
 #>   Path-end coefficients (nonzero variables):
 #> 
 #>   Variable    alpha       beta        Type
 #>   ----------  ----------  ----------  ----------------
-#>   x10         -0.9999     -0.8829     shared (+)
-#>   x3          +0.1694     +0.9977     shared (+)
-#>   x9          +0.9737     +0.9110     shared (+)
-#>   x1          +1.1859     +0.0074     shared (+)
+#>   x10         -1.0099     -0.8857     shared (+)
+#>   x3          +0.1692     +0.9785     shared (+)
+#>   x9          +0.9638     +0.9115     shared (+)
+#>   x1          +1.1860     +0.0069     shared (+)
 #>   x2          -1.0916          —    readmission only
-#>   x4          -0.0386     -0.9092     shared (+)
-#>   x6          +0.0487     -0.0908     shared (–)
+#>   x4          -0.0388     -0.8920     shared (+)
+#>   x6          +0.0480     -0.0756     shared (–)
 #>   x5          -0.0320          —    readmission only
-#>   x8          +0.0112     -0.0543     shared (–)
+#>   x8          +0.0112     -0.0380     shared (–)
 #>   x7          +0.0025          —    readmission only
 ```
 
@@ -368,7 +368,7 @@ lambda_seq  <- lambda_path[dec_idx]
 
 cat(sprintf("Full path: %d steps; decreasing path: %d steps\n",
             length(lambda_path), length(lambda_seq)))
-#> Full path: 5001 steps; decreasing path: 1688 steps
+#> Full path: 5001 steps; decreasing path: 1677 steps
 
 set.seed(1)
 cv_jfm <- cv_stagewise(
@@ -382,8 +382,8 @@ cv_jfm
 #> Cross-validation (jfm/coop)
 #> 
 #>   Covariates (p):              10
-#>   Lambda grid size:            1688
-#>   Best position (combined):    1688  (lambda = 9.671e-05)
+#>   Lambda grid size:            1677
+#>   Best position (combined):    1677  (lambda = 9.844e-05)
 #>   Selected variables:          10 readmission, 7 death
 #>     Readmission (alpha): 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
 #>     Death (beta):        1, 3, 4, 6, 8, 9, 10
@@ -439,7 +439,7 @@ cat("\nNonzero beta:\n")
 #> 
 #> Nonzero beta:
 print(round(cv_jfm$beta[cv_jfm$beta != 0], 4))
-#> [1]  0.0074  0.9647 -0.8552 -0.0398 -0.0053  0.9099 -0.8829
+#> [1]  0.0074  0.9695 -0.8580 -0.0417 -0.0070  0.9115 -0.8848
 ```
 
 [`summary()`](https://rdrr.io/r/base/summary.html) shows a formatted
@@ -449,21 +449,21 @@ table with the CV-optimal coefficients:
 summary(cv_jfm)
 #> CV-selected model (jfm/coop)
 #> 
-#>   p = 10  |  Lambda grid: 1688 steps  |  CV optimal: step 1688 (lambda = 9.671e-05)
+#>   p = 10  |  Lambda grid: 1677 steps  |  CV optimal: step 1677 (lambda = 9.844e-05)
 #> 
 #>   Selected coefficients  (10 readmission, 7 death):
 #> 
 #>   Variable    alpha       beta        Type
 #>   ----------  ----------  ----------  ----------------
-#>   x10         -0.9999     -0.8829     shared (+)
-#>   x9          +0.9638     +0.9099     shared (+)
+#>   x10         -0.9999     -0.8848     shared (+)
+#>   x9          +0.9638     +0.9115     shared (+)
 #>   x1          +1.1859     +0.0074     shared (+)
-#>   x3          +0.1692     +0.9647     shared (+)
+#>   x3          +0.1692     +0.9695     shared (+)
 #>   x2          -1.0916          —    readmission only
-#>   x4          -0.0384     -0.8552     shared (+)
-#>   x6          +0.0487     -0.0398     shared (–)
+#>   x4          -0.0384     -0.8580     shared (+)
+#>   x6          +0.0487     -0.0417     shared (–)
 #>   x5          -0.0320          —    readmission only
-#>   x8          +0.0112     -0.0053     shared (–)
+#>   x8          +0.0112     -0.0070     shared (–)
 #>   x7          +0.0025          —    readmission only
 ```
 
@@ -486,11 +486,11 @@ JFM, Breslow-type estimators are used:
 bh <- baseline_hazard(cv_jfm, times = c(0.5, 1.0, 2.0, 4.0, 6.0))
 print(bh)
 #>   time cumhaz_readmission cumhaz_death
-#> 1  0.5          0.4977983   0.02441637
-#> 2  1.0          0.9806753   0.05595363
-#> 3  2.0          1.8873801   0.09071824
-#> 4  4.0          4.0971583   0.18970647
-#> 5  6.0          6.0595250   0.26811397
+#> 1  0.5          0.4977984   0.02422675
+#> 2  1.0          0.9806756   0.05559379
+#> 3  2.0          1.8873802   0.09018160
+#> 4  4.0          4.0971585   0.18877560
+#> 5  6.0          6.0595254   0.26684196
 ```
 
 To retrieve only one of the two processes:
@@ -501,11 +501,11 @@ bh_re <- baseline_hazard(cv_jfm, times = seq(0, 5, by = 0.5),
 head(bh_re)
 #>   time cumhaz_readmission
 #> 1  0.0          0.0000000
-#> 2  0.5          0.4977983
-#> 3  1.0          0.9806753
-#> 4  1.5          1.3814991
-#> 5  2.0          1.8873801
-#> 6  2.5          2.4783701
+#> 2  0.5          0.4977984
+#> 3  1.0          0.9806756
+#> 4  1.5          1.3814992
+#> 5  2.0          1.8873802
+#> 6  2.5          2.4783703
 ```
 
 ### 5.8 Survival Prediction
@@ -910,7 +910,7 @@ cat("\nDeath log-hazard contributions (nonzero):\n")
 c1_de <- pred$contrib_de[1, ]
 print(round(c1_de[c1_de != 0], 4))
 #>      x1      x3      x4      x6      x8      x9     x10 
-#>  0.0170  0.7217 -1.8729 -0.0186 -0.0037  1.1583 -0.5224
+#>  0.0168  0.7253 -1.8791 -0.0195 -0.0049  1.1602 -0.5236
 ```
 
 ------------------------------------------------------------------------
@@ -961,14 +961,14 @@ print(coef_df, row.names = FALSE)
 #>  variable alpha_true alpha_est beta_true beta_est
 #>        x1        1.1     1.186       0.1    0.007
 #>        x2       -1.1    -1.092      -0.1    0.000
-#>        x3        0.1     0.169       1.1    0.965
-#>        x4       -0.1    -0.038      -1.1   -0.855
+#>        x3        0.1     0.169       1.1    0.969
+#>        x4       -0.1    -0.038      -1.1   -0.858
 #>        x5        0.0    -0.032       0.0    0.000
-#>        x6        0.0     0.049       0.0   -0.040
+#>        x6        0.0     0.049       0.0   -0.042
 #>        x7        0.0     0.003       0.0    0.000
-#>        x8        0.0     0.011       0.0   -0.005
-#>        x9        1.0     0.964       1.0    0.910
-#>       x10       -1.0    -1.000      -1.0   -0.883
+#>        x8        0.0     0.011       0.0   -0.007
+#>        x9        1.0     0.964       1.0    0.911
+#>       x10       -1.0    -1.000      -1.0   -0.885
 
 cat(sprintf(
   "\nJFM  alpha: TP=%d FP=%d FN=%d  |  beta: TP=%d FP=%d FN=%d\n",
@@ -1129,15 +1129,20 @@ par(old_par)
 
 ## 11. References
 
-Rondeau, V., Mathoulin-Pelissier, S., Jacqmin-Gadda, H., Brouste, V.,
-and Soubeyran, P. (2007). Joint frailty models for recurring events and
-death using maximum penalized likelihood estimation: Application in
-transplantation. *Biostatistics*, **8**(4), 708–721.
+Blanche, P., Dartigues, J.-F., and Jacqmin-Gadda, H. (2013). Estimating
+and comparing time-dependent areas under receiver operating
+characteristic curves for censored event times with competing risks.
+*Statistics in Medicine*, **32**(30), 5381–5397.
+
+Kalbfleisch, J. D., Schaubel, D. E., Ye, Y., and Gong, Q. (2013). An
+estimating function approach to the analysis of recurrent and terminal
+events. *Biometrics*, **69**(2), 366–374.
 
 Xu, G., Chiou, S. H., Huang, C.-Y., Wang, M.-C., and Yan, J. (2017).
 Joint scale-change models for recurrent events and failure time.
 *Journal of the American Statistical Association*, **112**(518),
 794–805.
 
-Huo, L. and Huling, J. (2025). A stagewise selection framework for joint
-models for semi-competing risk prediction. *Manuscript*.
+Huo, L., Jiang, Z., Hou, J., and Huling, J. D. (2025). A stagewise
+selection framework for joint models for semi-competing risk prediction.
+*Manuscript*.
