@@ -1,30 +1,31 @@
-swjm: Stagewise Variable Selection for Joint Models of Semi-Competing
-Risks ================
+# swjm: Stagewise Variable Selection for Joint Models of Semi-Competing Risks
 
-- [Overview](#overview)
-- [Installation](#installation)
-- [Data format](#data-format)
-- [Workflow](#workflow)
-  - [1. Simulate data](#id_1-simulate-data)
-  - [2. Fit the stagewise regularization
-    path](#id_2-fit-the-stagewise-regularization-path)
-  - [3. Plot the coefficient path](#id_3-plot-the-coefficient-path)
-  - [4. Cross-validation to select the tuning
-    parameter](#id_4-cross-validation-to-select-the-tuning-parameter)
-  - [5. Plot the cross-validation
-    results](#id_5-plot-the-cross-validation-results)
-  - [6. Summarize the chosen model](#id_6-summarize-the-chosen-model)
-  - [7. Baseline hazard](#id_7-baseline-hazard)
-  - [8. Predict survival curves](#id_8-predict-survival-curves)
-  - [9. Plot survival curves and predictor
-    contributions](#id_9-plot-survival-curves-and-predictor-contributions)
-  - [10. JSCM workflow (cross-validation + survival
-    prediction)](#id_10-jscm-workflow-cross-validation--survival-prediction)
-  - [11. Other penalties](#id_11-other-penalties)
-- [12. Model evaluation](#id_12-model-evaluation)
-  - [12.1 Coefficient recovery](#id_121-coefficient-recovery)
-  - [12.2 Time-varying AUC](#id_122-time-varying-auc)
-- [Package conventions](#package-conventions)
+- [swjm: Stagewise Variable Selection for Joint Models of Semi-Competing
+  Risks](#swjm-stagewise-variable-selection-for-joint-models-of-semi-competing-risks)
+  - [Overview](#overview)
+  - [Installation](#installation)
+  - [Data format](#data-format)
+  - [Workflow](#workflow)
+    - [1. Simulate data](#id_1-simulate-data)
+    - [2. Fit the stagewise regularization
+      path](#id_2-fit-the-stagewise-regularization-path)
+    - [3. Plot the coefficient path](#id_3-plot-the-coefficient-path)
+    - [4. Cross-validation to select the tuning
+      parameter](#id_4-cross-validation-to-select-the-tuning-parameter)
+    - [5. Plot the cross-validation
+      results](#id_5-plot-the-cross-validation-results)
+    - [6. Summarize the chosen model](#id_6-summarize-the-chosen-model)
+    - [7. Baseline hazard](#id_7-baseline-hazard)
+    - [8. Predict survival curves](#id_8-predict-survival-curves)
+    - [9. Plot survival curves and predictor
+      contributions](#id_9-plot-survival-curves-and-predictor-contributions)
+    - [10. JSCM workflow (cross-validation + survival
+      prediction)](#id_10-jscm-workflow-cross-validation--survival-prediction)
+    - [11. Other penalties](#id_11-other-penalties)
+  - [12. Model evaluation](#id_12-model-evaluation)
+    - [12.1 Coefficient recovery](#id_121-coefficient-recovery)
+    - [12.2 Time-varying AUC](#id_122-time-varying-auc)
+  - [Package conventions](#package-conventions)
 
 ## Overview
 
