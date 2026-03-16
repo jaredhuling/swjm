@@ -4,7 +4,9 @@ Version: 0.1.0
 Authors@R: c(
     person("Huo", "Lingfeng", role = c("aut", "cre"),
            email = "huol@example.com"),
-    person("Huling", "Jared", role = "aut"))
+    person("Jiang", "Ziren", role = "aut"),
+    person("Hou", "Jue", role = "aut"),
+    person("Huling", "Jared D.", role = "aut"))
 Description: Implements stagewise regression for variable selection in joint
     models of recurrent events and terminal events (semi-competing risks).
     Supports two model frameworks: the joint frailty model (Cox-type) and the
@@ -31,4 +33,3 @@ Suggests:
     rmarkdown
 Config/testthat/edition: 3
 VignetteBuilder: knitr
-URL: http://jaredhuling.org/swjm/

@@ -46,7 +46,9 @@ All functions expect a recurrent-event data frame with the following columns:
 
 Authors:
 \itemize{
-  \item Huling Jared
+  \item Jiang Ziren
+  \item Hou Jue
+  \item Huling Jared D.
 }
 
 }
