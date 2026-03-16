@@ -1,31 +1,32 @@
-swjm: Stagewise Variable Selection for Joint Models of Semi-Competing
-Risks
-================
 
-- [Overview](#overview)
-- [Installation](#installation)
-- [Data format](#data-format)
-- [Workflow](#workflow)
-  - [1. Simulate data](#1-simulate-data)
-  - [2. Fit the stagewise regularization
-    path](#2-fit-the-stagewise-regularization-path)
-  - [3. Plot the coefficient path](#3-plot-the-coefficient-path)
-  - [4. Cross-validation to select the tuning
-    parameter](#4-cross-validation-to-select-the-tuning-parameter)
-  - [5. Plot the cross-validation
-    results](#5-plot-the-cross-validation-results)
-  - [6. Summarize the chosen model](#6-summarize-the-chosen-model)
-  - [7. Baseline hazard](#7-baseline-hazard)
-  - [8. Predict survival curves](#8-predict-survival-curves)
-  - [9. Plot survival curves and predictor
-    contributions](#9-plot-survival-curves-and-predictor-contributions)
-  - [10. JSCM workflow (cross-validation + survival
-    prediction)](#10-jscm-workflow-cross-validation--survival-prediction)
-  - [11. Other penalties](#11-other-penalties)
-- [12. Model evaluation](#12-model-evaluation)
-  - [12.1 Coefficient recovery](#121-coefficient-recovery)
-  - [12.2 Time-varying AUC](#122-time-varying-auc)
-- [Package conventions](#package-conventions)
+- [swjm: Stagewise Variable Selection for Joint Models of Semi-Competing
+  Risks](#swjm-stagewise-variable-selection-for-joint-models-of-semi-competing-risks)
+  - [Overview](#overview)
+  - [Installation](#installation)
+  - [Data format](#data-format)
+  - [Workflow](#workflow)
+    - [1. Simulate data](#1-simulate-data)
+    - [2. Fit the stagewise regularization
+      path](#2-fit-the-stagewise-regularization-path)
+    - [3. Plot the coefficient path](#3-plot-the-coefficient-path)
+    - [4. Cross-validation to select the tuning
+      parameter](#4-cross-validation-to-select-the-tuning-parameter)
+    - [5. Plot the cross-validation
+      results](#5-plot-the-cross-validation-results)
+    - [6. Summarize the chosen model](#6-summarize-the-chosen-model)
+    - [7. Baseline hazard](#7-baseline-hazard)
+    - [8. Predict survival curves](#8-predict-survival-curves)
+    - [9. Plot survival curves and predictor
+      contributions](#9-plot-survival-curves-and-predictor-contributions)
+    - [10. JSCM workflow (cross-validation + survival
+      prediction)](#10-jscm-workflow-cross-validation--survival-prediction)
+    - [11. Other penalties](#11-other-penalties)
+  - [12. Model evaluation](#12-model-evaluation)
+    - [12.1 Coefficient recovery](#121-coefficient-recovery)
+    - [12.2 Time-varying AUC](#122-time-varying-auc)
+  - [Package conventions](#package-conventions)
+
+# swjm: Stagewise Variable Selection for Joint Models of Semi-Competing Risks
 
 ## Overview
 
