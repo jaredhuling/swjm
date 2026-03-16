@@ -47,7 +47,7 @@ process.
 
 ### 1.2 Joint Frailty Model (JFM)
 
-The JFM (Rondeau et al., 2007) introduces a subject-specific frailty
+The JFM (Kalbfleisch et al., 2013) introduces a subject-specific frailty
 $`\omega_i \sim \text{Gamma}(\kappa, \kappa)`$ that links the two
 processes:
 
@@ -1167,15 +1167,20 @@ par(old_par)
 
 ## 11. References
 
-Rondeau, V., Mathoulin-Pelissier, S., Jacqmin-Gadda, H., Brouste, V.,
-and Soubeyran, P. (2007). Joint frailty models for recurring events and
-death using maximum penalized likelihood estimation: Application in
-transplantation. *Biostatistics*, **8**(4), 708–721.
+Blanche, P., Dartigues, J.-F., and Jacqmin-Gadda, H. (2013). Estimating
+and comparing time-dependent areas under receiver operating
+characteristic curves for censored event times with competing risks.
+*Statistics in Medicine*, **32**(30), 5381–5397.
+
+Kalbfleisch, J. D., Schaubel, D. E., Ye, Y., and Gong, Q. (2013). An
+estimating function approach to the analysis of recurrent and terminal
+events. *Biometrics*, **69**(2), 366–374.
 
 Xu, G., Chiou, S. H., Huang, C.-Y., Wang, M.-C., and Yan, J. (2017).
 Joint scale-change models for recurrent events and failure time.
 *Journal of the American Statistical Association*, **112**(518),
 794–805.
 
-Huo, L. and Huling, J. (2025). A stagewise selection framework for joint
-models for semi-competing risk prediction. *Manuscript*.
+Huo, L., Jiang, Z., Hou, J., and Huling, J. D. (2025). A stagewise
+selection framework for joint models for semi-competing risk prediction.
+*Manuscript*.
