@@ -208,21 +208,24 @@ set.seed(123)
 dat_jfm  <- generate_data(n = 500, p = 10, scenario = 1, model = "jfm")
 Data_jfm <- dat_jfm$data
 
-cat(sprintf("JFM: %d subjects, %d rows, %d readmissions, %d deaths\n",
-            length(unique(Data_jfm$id)), nrow(Data_jfm),
-            sum(Data_jfm$event), sum(Data_jfm$status)))
-
 # Preview
 head(Data_jfm[, 1:8])
 ```
 
+JFM: `r length(unique(Data_jfm$id))` subjects, `r nrow(Data_jfm)` rows, `r sum(Data_jfm$event)` readmissions, `r sum(Data_jfm$status)` deaths
+
 The returned list also contains the true generating coefficients:
 
-```{r true-jfm}
-cat("True alpha (readmission):\n")
-print(round(dat_jfm$alpha_true, 2))
-cat("\nTrue beta (death):\n")
-print(round(dat_jfm$beta_true, 2))
+True alpha (readmission):
+
+```{r true-jfm-alpha}
+round(dat_jfm$alpha_true, 2)
+```
+
+True beta (death):
+
+```{r true-jfm-beta}
+round(dat_jfm$beta_true, 2)
 ```
 
 **Scenario descriptions** (for both JFM and JSCM):
@@ -239,11 +242,9 @@ print(round(dat_jfm$beta_true, 2))
 set.seed(456)
 dat_jscm  <- generate_data(n = 500, p = 10, scenario = 1, model = "jscm")
 Data_jscm <- dat_jscm$data
-
-cat(sprintf("JSCM: %d subjects, %d rows, %d readmissions, %d deaths\n",
-            length(unique(Data_jscm$id)), nrow(Data_jscm),
-            sum(Data_jscm$event), sum(Data_jscm$status)))
 ```
+
+JSCM: `r length(unique(Data_jscm$id))` subjects, `r nrow(Data_jscm)` rows, `r sum(Data_jscm$event)` readmissions, `r sum(Data_jscm$status)` deaths
 
 For the JSCM, covariates are drawn from $\text{Uniform}(-1, 1)$, and a
 gamma frailty ($\text{shape} = 4$, $\text{scale} = 0.25$) is used in
@@ -283,23 +284,19 @@ The returned `swjm_path` object contains:
 
 ```{r path-explore}
 p <- 10
-
-# Number of steps recorded
 k <- ncol(fit_jfm$alpha)
-cat("Path length:", k, "steps\n")
-
-# Lambda range
-cat(sprintf("Lambda range: [%.4g, %.4g]\n",
-            min(fit_jfm$lambda), max(fit_jfm$lambda)))
-
-# Active (nonzero) variables at the final step
 active_final <- which(fit_jfm$alpha[, k] != 0 |
                       fit_jfm$beta[, k]  != 0)
-cat("Active variables at final step:", active_final, "\n")
+```
 
-# Readmission (alpha) coefficients at the final step
-cat("\nalpha at final step:\n")
-print(round(fit_jfm$alpha[, k], 4))
+- Path length: `r k` steps
+- Lambda range: [`r sprintf("%.4g", min(fit_jfm$lambda))`, `r sprintf("%.4g", max(fit_jfm$lambda))`]
+- Active variables at final step: `r paste(active_final, collapse = " ")`
+
+Readmission (alpha) coefficients at the final step:
+
+```{r path-explore-alpha}
+round(fit_jfm$alpha[, k], 4)
 ```
 
 `summary()` shows a compact table of path-end coefficients annotated with
@@ -333,14 +330,15 @@ cross-validation using cross-fitted EE score norms.
 It is good practice to restrict the $\lambda$ grid to the **strictly
 decreasing** portion of the path (using `extract_decreasing_indices()`):
 
-```{r cv-jfm, cache = TRUE}
+```{r cv-jfm-prep}
 lambda_path <- fit_jfm$lambda
 dec_idx     <- swjm:::extract_decreasing_indices(lambda_path)
 lambda_seq  <- lambda_path[dec_idx]
+```
 
-cat(sprintf("Full path: %d steps; decreasing path: %d steps\n",
-            length(lambda_path), length(lambda_seq)))
+Full path: `r length(lambda_path)` steps; decreasing path: `r length(lambda_seq)` steps
 
+```{r cv-jfm, cache = TRUE}
 set.seed(1)
 cv_jfm <- cv_stagewise(
   Data_jfm,
@@ -382,16 +380,20 @@ dashed line marks the optimal $\lambda$.
 
 ### 5.6 Extract Coefficients and Summarize
 
-```{r coef-jfm}
-# Selected readmission coefficients
-cat("Selected alpha (readmission) variables:", which(cv_jfm$alpha != 0), "\n")
-cat("Selected beta (death) variables:       ", which(cv_jfm$beta  != 0), "\n")
+Selected readmission (alpha) variables: `r paste(which(cv_jfm$alpha != 0), collapse = " ")`
 
-# Nonzero values
-cat("\nNonzero alpha:\n")
-print(round(cv_jfm$alpha[cv_jfm$alpha != 0], 4))
-cat("\nNonzero beta:\n")
-print(round(cv_jfm$beta[cv_jfm$beta != 0], 4))
+Selected death (beta) variables: `r paste(which(cv_jfm$beta != 0), collapse = " ")`
+
+Nonzero alpha:
+
+```{r coef-jfm-alpha}
+round(cv_jfm$alpha[cv_jfm$alpha != 0], 4)
+```
+
+Nonzero beta:
+
+```{r coef-jfm-beta}
+round(cv_jfm$beta[cv_jfm$beta != 0], 4)
 ```
 
 `summary()` shows a formatted table with the CV-optimal coefficients:
@@ -561,15 +563,13 @@ cv_jscm
 
 ### 7.3 Results
 
-```{r jscm-results}
-# Selected variables
-cat("Selected alpha (readmission):", which(cv_jscm$alpha != 0), "\n")
-cat("Selected beta (death):       ", which(cv_jscm$beta  != 0), "\n")
+Selected alpha (readmission): `r paste(which(cv_jscm$alpha != 0), collapse = " ")`
 
-# Compare with truth
-cat("\nTrue nonzero alpha:", which(dat_jscm$alpha_true != 0), "\n")
-cat("True nonzero beta: ", which(dat_jscm$beta_true  != 0), "\n")
-```
+Selected beta (death): `r paste(which(cv_jscm$beta != 0), collapse = " ")`
+
+True nonzero alpha: `r paste(which(dat_jscm$alpha_true != 0), collapse = " ")`
+
+True nonzero beta: `r paste(which(dat_jscm$beta_true != 0), collapse = " ")`
 
 ```{r plot-cv-jscm}
 plot(cv_jscm)
@@ -612,17 +612,19 @@ multiplicative contribution of predictor $j$:
 | $= 1$ | no effect on this subject's timing |
 | $< 1$ | predictor $j$ decelerates events — longer time to readmission |
 
-```{r predict-jscm, fig.height = 8}
+```{r predict-jscm}
 set.seed(7)
 newz_jscm <- matrix(runif(30, -1, 1), nrow = 3, ncol = 10)
 rownames(newz_jscm) <- paste0("Patient_", 1:3)
 
 pred_jscm <- predict(cv_jscm, newdata = newz_jscm)
 pred_jscm
+```
 
-# Total time-acceleration factors for each subject (recurrence process)
-cat("Recurrence time-acceleration factors:\n")
-print(round(pred_jscm$time_accel_re, 3))
+Recurrence time-acceleration factors (total per subject):
+
+```{r predict-jscm-accel}
+round(pred_jscm$time_accel_re, 3)
 ```
 
 `plot()` produces the same four-panel layout as for the JFM: survival curves
@@ -689,15 +691,14 @@ nz_a <- which(a != 0)
 nz_b <- which(b != 0)
 shared <- intersect(nz_a, nz_b)
 
-cat("Readmission-only:", setdiff(nz_a, nz_b), "\n")
-cat("Death-only:      ", setdiff(nz_b, nz_a), "\n")
-if (length(shared) > 0) {
-  same_sign <- shared[sign(a[shared]) == sign(b[shared])]
-  opp_sign  <- shared[sign(a[shared]) != sign(b[shared])]
-  cat("Shared (same sign):", same_sign, "\n")
-  cat("Shared (opp. sign):", opp_sign, "\n")
-}
+same_sign <- if (length(shared) > 0) shared[sign(a[shared]) == sign(b[shared])] else integer(0)
+opp_sign  <- if (length(shared) > 0) shared[sign(a[shared]) != sign(b[shared])] else integer(0)
 ```
+
+- Readmission-only: `r paste(setdiff(nz_a, nz_b), collapse = ", ")`
+- Death-only: `r paste(setdiff(nz_b, nz_a), collapse = ", ")`
+- Shared (same sign): `r paste(same_sign, collapse = ", ")`
+- Shared (opp. sign): `r paste(opp_sign, collapse = ", ")`
 
 ### 8.3 Survival Curve Interpretation
 
@@ -717,14 +718,20 @@ increase risk; negative reduce it.  For JSCM, positive contributions
 accelerate events; negative decelerate them.
 
 ```{r contrib-example}
-# Contributions for Patient_1 — nonzero only
 c1_re <- pred$contrib_re[1, ]
-cat("Readmission log-hazard contributions (nonzero):\n")
-print(round(c1_re[c1_re != 0], 4))
-
-cat("\nDeath log-hazard contributions (nonzero):\n")
 c1_de <- pred$contrib_de[1, ]
-print(round(c1_de[c1_de != 0], 4))
+```
+
+Readmission log-hazard contributions for Patient\_1 (nonzero):
+
+```{r contrib-re}
+round(c1_re[c1_re != 0], 4)
+```
+
+Death log-hazard contributions for Patient\_1 (nonzero):
+
+```{r contrib-de}
+round(c1_de[c1_de != 0], 4)
 ```
 
 ---
@@ -772,16 +779,9 @@ coef_df <- data.frame(
 colnames(coef_df) <- c("variable", "alpha_true", "alpha_est",
                         "beta_true", "beta_est")
 print(coef_df, row.names = FALSE)
-
-cat(sprintf(
-  "\nJFM  alpha: TP=%d FP=%d FN=%d  |  beta: TP=%d FP=%d FN=%d\n",
-  sum(cv_jfm$alpha != 0 & dat_jfm$alpha_true != 0),
-  sum(cv_jfm$alpha != 0 & dat_jfm$alpha_true == 0),
-  sum(cv_jfm$alpha == 0 & dat_jfm$alpha_true != 0),
-  sum(cv_jfm$beta  != 0 & dat_jfm$beta_true  != 0),
-  sum(cv_jfm$beta  != 0 & dat_jfm$beta_true  == 0),
-  sum(cv_jfm$beta  == 0 & dat_jfm$beta_true  != 0)))
 ```
+
+JFM alpha: TP=`r sum(cv_jfm$alpha != 0 & dat_jfm$alpha_true != 0)` FP=`r sum(cv_jfm$alpha != 0 & dat_jfm$alpha_true == 0)` FN=`r sum(cv_jfm$alpha == 0 & dat_jfm$alpha_true != 0)` | beta: TP=`r sum(cv_jfm$beta != 0 & dat_jfm$beta_true != 0)` FP=`r sum(cv_jfm$beta != 0 & dat_jfm$beta_true == 0)` FN=`r sum(cv_jfm$beta == 0 & dat_jfm$beta_true != 0)`
 
 ```{r coef-compare-jscm}
 show_jscm <- sort(which(dat_jscm$alpha_true != 0 | cv_jscm$alpha != 0 |
@@ -797,16 +797,9 @@ coef_jscm <- data.frame(
 colnames(coef_jscm) <- c("variable", "alpha_true", "alpha_est",
                           "beta_true", "beta_est")
 print(coef_jscm, row.names = FALSE)
-
-cat(sprintf(
-  "\nJSCM alpha: TP=%d FP=%d FN=%d  |  beta: TP=%d FP=%d FN=%d\n",
-  sum(cv_jscm$alpha != 0 & dat_jscm$alpha_true != 0),
-  sum(cv_jscm$alpha != 0 & dat_jscm$alpha_true == 0),
-  sum(cv_jscm$alpha == 0 & dat_jscm$alpha_true != 0),
-  sum(cv_jscm$beta  != 0 & dat_jscm$beta_true  != 0),
-  sum(cv_jscm$beta  != 0 & dat_jscm$beta_true  == 0),
-  sum(cv_jscm$beta  == 0 & dat_jscm$beta_true  != 0)))
 ```
+
+JSCM alpha: TP=`r sum(cv_jscm$alpha != 0 & dat_jscm$alpha_true != 0)` FP=`r sum(cv_jscm$alpha != 0 & dat_jscm$alpha_true == 0)` FN=`r sum(cv_jscm$alpha == 0 & dat_jscm$alpha_true != 0)` | beta: TP=`r sum(cv_jscm$beta != 0 & dat_jscm$beta_true != 0)` FP=`r sum(cv_jscm$beta != 0 & dat_jscm$beta_true == 0)` FN=`r sum(cv_jscm$beta == 0 & dat_jscm$beta_true != 0)`
 
 ### 10.2 Time-Varying AUC
 

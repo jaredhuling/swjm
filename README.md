@@ -72,14 +72,6 @@ set.seed(42)
 dat_jfm  <- generate_data(n = 200, p = 100, scenario = 1, model = "jfm")
 Data_jfm <- dat_jfm$data
 
-cat(sprintf(
-  "JFM data: n = %d subjects, %d readmission events, %d deaths\n",
-  length(unique(Data_jfm$id)),
-  sum(Data_jfm$event),
-  sum(Data_jfm$status)
-))
-#> JFM data: n = 200 subjects, 380 readmission events, 40 deaths
-
 # JSCM — same scenario
 set.seed(42)
 dat_jscm  <- generate_data(n = 200, p = 100, scenario = 1, model = "jscm")
@@ -94,6 +86,8 @@ dat_jscm  <- generate_data(n = 200, p = 100, scenario = 1, model = "jscm")
 #> Proportion of subjects with a terminal event:   0.175
 Data_jscm <- dat_jscm$data
 ```
+
+JFM data: n = 200 subjects, 380 readmission events, 40 deaths
 
 ### 2. Fit the stagewise regularization path
 
@@ -116,19 +110,17 @@ addition to the combined `theta` matrix (2*p* × (*k*+1)):
 
 ``` r
 p <- 100
-cat("alpha matrix:", nrow(fit_jfm$alpha), "rows x", ncol(fit_jfm$alpha),
-    "columns\n")
-#> alpha matrix: 100 rows x 5001 columns
-cat("beta  matrix:", nrow(fit_jfm$beta),  "rows x", ncol(fit_jfm$beta),
-    "columns\n")
-#> beta  matrix: 100 rows x 5001 columns
-
-# Nonzero readmission coefficients at the final step
 k_final <- ncol(fit_jfm$alpha)
-cat("Nonzero alpha entries at final step:\n")
-#> Nonzero alpha entries at final step:
 a_final <- round(fit_jfm$alpha[, k_final], 4)
-print(a_final[a_final != 0])
+```
+
+- alpha matrix: 100 rows x 5001 columns
+- beta matrix: 100 rows x 5001 columns
+
+Nonzero alpha entries at final step:
+
+``` r
+a_final[a_final != 0]
 #>  [1]  1.0057 -1.0755  0.0473 -0.0357  0.0050  0.0130  1.0393 -0.9826  0.0197
 #> [10]  0.0033 -0.0175 -0.0170  0.0960 -0.0430  0.0520 -0.0030 -0.0232 -0.0233
 #> [19]  0.0460  0.0341 -0.0407  0.0029 -0.0149  0.0300 -0.0009 -0.0020 -0.0080
@@ -276,14 +268,12 @@ summary(cv_jfm)
 Direct access to selected coefficients:
 
 ``` r
-cat("Selected readmission (alpha) variables:", which(cv_jfm$alpha != 0), "\n")
-#> Selected readmission (alpha) variables: 1 2 3 4 9 10 11 15 79 80 85
-cat("Selected death (beta) variables:       ", which(cv_jfm$beta  != 0), "\n")
-#> Selected death (beta) variables:        1 2 3 4 9 10 11 79 85
-
 # coef() returns the combined numeric vector c(alpha, beta) for compatibility
 theta_best <- coef(cv_jfm)
 ```
+
+- Selected readmission (alpha) variables: 1 2 3 4 9 10 11 15 79 80 85
+- Selected death (beta) variables: 1 2 3 4 9 10 11 79 85
 
 ### 7. Baseline hazard
 
@@ -420,11 +410,12 @@ newz_jscm <- matrix(runif(600, -1, 1), nrow = 3, ncol = 100)
 #> from size of matrix: [600 != 3 x 100]
 
 pred_jscm <- predict(cv_jscm, newdata = newz_jscm)
+```
 
-# Total time-acceleration factor per subject (recurrence process)
-cat("Recurrence time-acceleration factors:\n")
-#> Recurrence time-acceleration factors:
-print(round(pred_jscm$time_accel_re, 3))
+Recurrence time-acceleration factors:
+
+``` r
+round(pred_jscm$time_accel_re, 3)
 #> Subject1 Subject2 Subject3 
 #>    7.648    0.167    0.726
 ```
@@ -491,18 +482,9 @@ print(coef_df, row.names = FALSE)
 #>       x79        0.0     0.020       0.0    0.023
 #>       x80        0.0     0.020       0.0    0.000
 #>       x85        0.0    -0.050       0.0    0.000
-
-cat(sprintf(
-  "\nJFM  alpha: TP=%d FP=%d FN=%d  |  beta: TP=%d FP=%d FN=%d\n",
-  sum(cv_jfm$alpha != 0 & dat_jfm$alpha_true != 0),
-  sum(cv_jfm$alpha != 0 & dat_jfm$alpha_true == 0),
-  sum(cv_jfm$alpha == 0 & dat_jfm$alpha_true != 0),
-  sum(cv_jfm$beta  != 0 & dat_jfm$beta_true  != 0),
-  sum(cv_jfm$beta  != 0 & dat_jfm$beta_true  == 0),
-  sum(cv_jfm$beta  == 0 & dat_jfm$beta_true  != 0)))
-#> 
-#> JFM  alpha: TP=6 FP=5 FN=0  |  beta: TP=6 FP=3 FN=0
 ```
+
+JFM alpha: TP=6 FP=5 FN=0 \| beta: TP=6 FP=3 FN=0
 
 ``` r
 show_jscm <- sort(which(dat_jscm$alpha_true != 0 | cv_jscm$alpha != 0 |
@@ -543,18 +525,9 @@ print(coef_jscm, row.names = FALSE)
 #>       x66        0.0     0.000       0.0   -0.020
 #>       x68        0.0     0.050       0.0    0.000
 #>       x69        0.0    -0.219       0.0   -0.154
-
-cat(sprintf(
-  "\nJSCM alpha: TP=%d FP=%d FN=%d  |  beta: TP=%d FP=%d FN=%d\n",
-  sum(cv_jscm$alpha != 0 & dat_jscm$alpha_true != 0),
-  sum(cv_jscm$alpha != 0 & dat_jscm$alpha_true == 0),
-  sum(cv_jscm$alpha == 0 & dat_jscm$alpha_true != 0),
-  sum(cv_jscm$beta  != 0 & dat_jscm$beta_true  != 0),
-  sum(cv_jscm$beta  != 0 & dat_jscm$beta_true  == 0),
-  sum(cv_jscm$beta  == 0 & dat_jscm$beta_true  != 0)))
-#> 
-#> JSCM alpha: TP=4 FP=17 FN=2  |  beta: TP=4 FP=12 FN=2
 ```
+
+JSCM alpha: TP=4 FP=17 FN=2 \| beta: TP=4 FP=12 FN=2
 
 ### 12.2 Time-varying AUC
 

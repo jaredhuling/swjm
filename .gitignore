@@ -6,3 +6,11 @@ src/*.o
 src/*.so
 src/*.dll
 .DS_store
+
+
+README_cache/
+README.html
+
+vignettes/*_cache/
+vignettes/*_files/
+vignettes/*.html
