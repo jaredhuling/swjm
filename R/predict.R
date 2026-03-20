@@ -236,7 +236,7 @@ print.swjm_pred <- function(x, ...) {
 #'     selected subject highlighted.
 #'   \item Bar chart of readmission predictor contributions
 #'     \eqn{\hat\alpha_j z_{ij}} (log-hazard scale).
-#'   \item Death-free survival curves with the selected subject highlighted.
+#'   \item Mortality survival curves with the selected subject highlighted.
 #'   \item Bar chart of death predictor contributions \eqn{\hat\beta_j z_{ij}}.
 #' }
 #'
@@ -247,7 +247,7 @@ print.swjm_pred <- function(x, ...) {
 #'     factor \eqn{e^{\hat\alpha^\top z_i}}.
 #'   \item Bar chart of recurrence log time-acceleration contributions
 #'     \eqn{\hat\alpha_j z_{ij}}: positive = events sooner, negative = later.
-#'   \item Death-free survival curves with the selected subject highlighted,
+#'   \item Mortality survival curves with the selected subject highlighted,
 #'     total acceleration factor \eqn{e^{\hat\beta^\top z_i}} in the title.
 #'   \item Bar chart of terminal-event log time-acceleration contributions
 #'     \eqn{\hat\beta_j z_{ij}}.
@@ -359,7 +359,7 @@ plot.swjm_pred <- function(x,
 
   if (x$model == "jfm") {
     surv_re_title  <- "Readmission-free survival"
-    surv_de_title  <- "Death-free survival"
+    surv_de_title  <- "Survival"
     contrib_re_title <- paste0("Readmission log-hazard contributions\n", subj_label)
     contrib_de_title <- paste0("Death log-hazard contributions\n", subj_label)
     ylab_re <- expression(hat(alpha)[j] * z[j])
