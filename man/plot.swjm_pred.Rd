@@ -43,7 +43,7 @@ the model:
 selected subject highlighted.
 \item Bar chart of readmission predictor contributions
 \eqn{\hat\alpha_j z_{ij}} (log-hazard scale).
-\item Death-free survival curves with the selected subject highlighted.
+\item Mortality survival curves with the selected subject highlighted.
 \item Bar chart of death predictor contributions \eqn{\hat\beta_j z_{ij}}.
 }
 
@@ -54,7 +54,7 @@ subject highlighted.  The panel title shows the total acceleration
 factor \eqn{e^{\hat\alpha^\top z_i}}.
 \item Bar chart of recurrence log time-acceleration contributions
 \eqn{\hat\alpha_j z_{ij}}: positive = events sooner, negative = later.
-\item Death-free survival curves with the selected subject highlighted,
+\item Mortality survival curves with the selected subject highlighted,
 total acceleration factor \eqn{e^{\hat\beta^\top z_i}} in the title.
 \item Bar chart of terminal-event log time-acceleration contributions
 \eqn{\hat\beta_j z_{ij}}.

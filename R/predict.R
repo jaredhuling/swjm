@@ -47,7 +47,7 @@
 #'   \describe{
 #'     \item{S_re}{Matrix of readmission-free survival probabilities
 #'       (rows = subjects, columns = \code{times}).}
-#'     \item{S_de}{Matrix of death-free survival probabilities.}
+#'     \item{S_de}{Matrix of death survival probabilities.}
 #'     \item{times}{Numeric vector of evaluation times.}
 #'     \item{lp_re}{Linear predictors for readmission
 #'       (\eqn{\hat\alpha^\top z_i}).  For JSCM this is the log

@@ -57,7 +57,7 @@ Invisibly returns `x`.
 2.  Bar chart of readmission predictor contributions \\\hat\alpha_j
     z\_{ij}\\ (log-hazard scale).
 
-3.  Death-free survival curves with the selected subject highlighted.
+3.  Mortality survival curves with the selected subject highlighted.
 
 4.  Bar chart of death predictor contributions \\\hat\beta_j z\_{ij}\\.
 
@@ -71,7 +71,7 @@ Invisibly returns `x`.
     \\\hat\alpha_j z\_{ij}\\: positive = events sooner, negative =
     later.
 
-3.  Death-free survival curves with the selected subject highlighted,
+3.  Mortality survival curves with the selected subject highlighted,
     total acceleration factor \\e^{\hat\beta^\top z_i}\\ in the title.
 
 4.  Bar chart of terminal-event log time-acceleration contributions
