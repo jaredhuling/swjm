@@ -503,16 +503,18 @@ For JSCM, Nelson-Aalen baselines on the accelerated time scale are used
 (see Section 7.5).
 
 ``` r
-set.seed(7)
-newz <- matrix(rnorm(30), nrow = 3, ncol = 10)
-rownames(newz) <- paste0("Patient_", 1:3)
+set.seed(1)
+newz <- matrix(rnorm(30), nrow = 7, ncol = 10)
+#> Warning in matrix(rnorm(30), nrow = 7, ncol = 10): data length [30] is not a
+#> sub-multiple or multiple of the number of rows [7]
+rownames(newz) <- paste0("Patient_", 1:7)
 colnames(newz) <- paste0("x", 1:10)
 
 pred <- predict(cv_jfm, newdata = newz)
 pred
 #> swjm predictions (jfm)
 #> 
-#>   Subjects:                3
+#>   Subjects:                7
 #>   Time points:             1107
 #>   Time range:              [2.774e-05, 6.393]
 #> 
@@ -532,9 +534,13 @@ The `swjm_pred` object contains:
 # Survival probabilities for all subjects at first few time points
 round(pred$S_re[, 1:5], 3)
 #>           t=2.774e-05 t=0.0008126 t=0.001243 t=0.001647 t=0.002234
-#> Patient_1       0.991       0.981      0.971      0.961      0.951
-#> Patient_2       1.000       0.999      0.999      0.998      0.998
-#> Patient_3       0.999       0.999      0.998      0.997      0.997
+#> Patient_1       1.000       1.000      1.000      1.000      1.000
+#> Patient_2       1.000       1.000      1.000      1.000      1.000
+#> Patient_3       1.000       1.000      0.999      0.999      0.999
+#> Patient_4       1.000       0.999      0.999      0.999      0.998
+#> Patient_5       1.000       1.000      1.000      1.000      1.000
+#> Patient_6       1.000       1.000      1.000      0.999      0.999
+#> Patient_7       0.997       0.994      0.990      0.987      0.983
 ```
 
 [`plot()`](https://rdrr.io/r/graphics/plot.default.html) on a
@@ -543,7 +549,7 @@ both processes (all subjects in grey, highlighted subject in color) plus
 bar charts of predictor contributions:
 
 ``` r
-plot(pred, which_subject = 1)
+plot(pred, which_subject = 3)
 ```
 
 ![](swjm_files/figure-html/plot-pred-1.png)
@@ -551,7 +557,7 @@ plot(pred, which_subject = 1)
 To focus on only one process:
 
 ``` r
-plot(pred, which_subject = 2, which_process = "readmission")
+plot(pred, which_subject = 4, which_process = "readmission")
 ```
 
 ![](swjm_files/figure-html/plot-pred-re-1.png)
@@ -879,7 +885,7 @@ Readmission log-hazard contributions for Patient_1 (nonzero):
 ``` r
 round(c1_re[c1_re != 0], 4)
 #>      x1      x2      x3      x4      x5      x6      x7      x8      x9     x10 
-#>  2.7125  0.4500  0.1266 -0.0841 -0.0729  0.0228  0.0000  0.0079  1.2268 -0.5917
+#> -0.7429 -0.8059  0.1903 -0.0300  0.0153 -0.0400 -0.0016  0.0066 -0.1502 -1.5951
 ```
 
 Death log-hazard contributions for Patient_1 (nonzero):
@@ -887,7 +893,7 @@ Death log-hazard contributions for Patient_1 (nonzero):
 ``` r
 round(c1_de[c1_de != 0], 4)
 #>      x1      x3      x4      x6      x8      x9     x10 
-#>  0.0168  0.7253 -1.8791 -0.0195 -0.0049  1.1602 -0.5236
+#> -0.0046  1.0906 -0.6711  0.0342 -0.0041 -0.1420 -1.4115
 ```
 
 ------------------------------------------------------------------------

@@ -754,16 +754,18 @@ S_{\text{de}}(t \mid z) = \exp\!\bigl(-\hat\Lambda_0^d(t)\,
 </annotation></semantics></math> For JSCM, Nelson-Aalen baselines on the
 accelerated time scale are used (see Section 7.5).</p>
 <div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">7</span><span class="op">)</span></span>
-<span><span class="va">newz</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">30</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="fl">3</span>, ncol <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">newz</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"Patient_"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">3</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">newz</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="fl">30</span><span class="op">)</span>, nrow <span class="op">=</span> <span class="fl">7</span>, ncol <span class="op">=</span> <span class="fl">10</span><span class="op">)</span></span>
+<span><span class="co">#&gt; Warning in matrix(rnorm(30), nrow = 7, ncol = 10): data length [30] is not a</span></span>
+<span><span class="co">#&gt; sub-multiple or multiple of the number of rows [7]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">newz</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"Patient_"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">7</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">newz</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/paste.html" class="external-link">paste0</a></span><span class="op">(</span><span class="st">"x"</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">10</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict</a></span><span class="op">(</span><span class="va">cv_jfm</span>, newdata <span class="op">=</span> <span class="va">newz</span><span class="op">)</span></span>
 <span><span class="va">pred</span></span>
 <span><span class="co">#&gt; swjm predictions (jfm)</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;   Subjects:                3</span></span>
+<span><span class="co">#&gt;   Subjects:                7</span></span>
 <span><span class="co">#&gt;   Time points:             1107</span></span>
 <span><span class="co">#&gt;   Time range:              [2.774e-05, 6.393]</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -793,19 +795,23 @@ contributions
 <code class="sourceCode R"><span><span class="co"># Survival probabilities for all subjects at first few time points</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">pred</span><span class="op">$</span><span class="va">S_re</span><span class="op">[</span>, <span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">]</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="co">#&gt;           t=2.774e-05 t=0.0008126 t=0.001243 t=0.001647 t=0.002234</span></span>
-<span><span class="co">#&gt; Patient_1       0.991       0.981      0.971      0.961      0.951</span></span>
-<span><span class="co">#&gt; Patient_2       1.000       0.999      0.999      0.998      0.998</span></span>
-<span><span class="co">#&gt; Patient_3       0.999       0.999      0.998      0.997      0.997</span></span></code></pre></div>
+<span><span class="co">#&gt; Patient_1       1.000       1.000      1.000      1.000      1.000</span></span>
+<span><span class="co">#&gt; Patient_2       1.000       1.000      1.000      1.000      1.000</span></span>
+<span><span class="co">#&gt; Patient_3       1.000       1.000      0.999      0.999      0.999</span></span>
+<span><span class="co">#&gt; Patient_4       1.000       0.999      0.999      0.999      0.998</span></span>
+<span><span class="co">#&gt; Patient_5       1.000       1.000      1.000      1.000      1.000</span></span>
+<span><span class="co">#&gt; Patient_6       1.000       1.000      1.000      0.999      0.999</span></span>
+<span><span class="co">#&gt; Patient_7       0.997       0.994      0.990      0.987      0.983</span></span></code></pre></div>
 <p><code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> on a <code>swjm_pred</code> object produces a
 four-panel figure: survival curves for both processes (all subjects in
 grey, highlighted subject in color) plus bar charts of predictor
 contributions:</p>
 <div class="sourceCode" id="cb24"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">pred</span>, which_subject <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">pred</span>, which_subject <span class="op">=</span> <span class="fl">3</span><span class="op">)</span></span></code></pre></div>
 <p><img src="swjm_files/figure-html/plot-pred-1.png" class="r-plt" alt="" width="672"></p>
 <p>To focus on only one process:</p>
 <div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">pred</span>, which_subject <span class="op">=</span> <span class="fl">2</span>, which_process <span class="op">=</span> <span class="st">"readmission"</span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">pred</span>, which_subject <span class="op">=</span> <span class="fl">4</span>, which_process <span class="op">=</span> <span class="st">"readmission"</span><span class="op">)</span></span></code></pre></div>
 <p><img src="swjm_files/figure-html/plot-pred-re-1.png" class="r-plt" alt="" width="672"></p>
 <hr>
 </div>
@@ -1212,12 +1218,12 @@ decelerate them.</p>
 <div class="sourceCode" id="cb38"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">c1_re</span><span class="op">[</span><span class="va">c1_re</span> <span class="op">!=</span> <span class="fl">0</span><span class="op">]</span>, <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="co">#&gt;      x1      x2      x3      x4      x5      x6      x7      x8      x9     x10 </span></span>
-<span><span class="co">#&gt;  2.7125  0.4500  0.1266 -0.0841 -0.0729  0.0228  0.0000  0.0079  1.2268 -0.5917</span></span></code></pre></div>
+<span><span class="co">#&gt; -0.7429 -0.8059  0.1903 -0.0300  0.0153 -0.0400 -0.0016  0.0066 -0.1502 -1.5951</span></span></code></pre></div>
 <p>Death log-hazard contributions for Patient_1 (nonzero):</p>
 <div class="sourceCode" id="cb39"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Round.html" class="external-link">round</a></span><span class="op">(</span><span class="va">c1_de</span><span class="op">[</span><span class="va">c1_de</span> <span class="op">!=</span> <span class="fl">0</span><span class="op">]</span>, <span class="fl">4</span><span class="op">)</span></span>
 <span><span class="co">#&gt;      x1      x3      x4      x6      x8      x9     x10 </span></span>
-<span><span class="co">#&gt;  0.0168  0.7253 -1.8791 -0.0195 -0.0049  1.1602 -0.5236</span></span></code></pre></div>
+<span><span class="co">#&gt; -0.0046  1.0906 -0.6711  0.0342 -0.0041 -0.1420 -1.4115</span></span></code></pre></div>
 <hr>
 </div>
 </div>
