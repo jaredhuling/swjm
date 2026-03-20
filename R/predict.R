@@ -372,7 +372,7 @@ plot.swjm_pred <- function(x,
     dir_de       <- if (accel_de > 1) "death sooner"  else "death later"
     surv_re_title  <- paste0("Recurrent event survival (AFT)\n",
                               subj_label, "  [accel: ", accel_re, "x, ", dir_re, "]")
-    surv_de_title  <- paste0("Death-free survival (AFT)\n",
+    surv_de_title  <- paste0("Survival (AFT)\n",
                               subj_label, "  [accel: ", accel_de, "x, ", dir_de, "]")
     contrib_re_title <- paste0("Recurrent event log time-acceleration\n", subj_label)
     contrib_de_title <- paste0("Terminal event log time-acceleration\n", subj_label)
