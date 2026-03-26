@@ -441,3 +441,287 @@ arma::vec jfm_score_cpp(
   }
   return U;
 }
+
+// ==================== Fast O(n_pseudo) JFM EE functions ====================
+//
+// These replace the O(n × ne) jfm_s0s1_cpp with a timeline-based incremental
+// scan.  The timeline is precomputed once (data-dependent, not
+// coefficient-dependent) and reused at every stagewise iteration.
+
+// Precompute sorted timeline of enter/exit/query events.
+//
+// entry_times: n_pseudo entry (left-truncation) times
+// exit_times:  n_pseudo exit times (next entry start or Y_i)
+// is_last:     n_pseudo int (1 if last entry for its subject, 0 otherwise)
+// query_times: ne sorted event times where S0t/S1t are needed
+// query_before_enter: int, if 1 then QUERY has priority over ENTER at same
+//     time (recurrent sub-model: uses L < t, strict).  If 0, ENTER has
+//     priority over QUERY (death sub-model: uses L <= t, non-strict).
+//
+// Returns list(type = int vec, idx = int vec, size = int).
+// Output type values:  1 = ENTER, 2 = QUERY, 0 or 3 = EXIT.
+//
+// [[Rcpp::export(rng = false)]]
+Rcpp::List jfm_precompute_timeline(
+    const arma::vec& entry_times,
+    const arma::vec& exit_times,
+    const arma::ivec& is_last,
+    const arma::vec& query_times,
+    int query_before_enter = 0
+) {
+  arma::uword n_pseudo = entry_times.n_elem;
+  arma::uword ne = query_times.n_elem;
+  arma::uword total = 2 * n_pseudo + ne;
+
+  // Build unsorted timeline: (time, sort_priority, operation_type, index)
+  // sort_priority determines order at ties; operation_type is used in the scan.
+  std::vector<double> tl_time(total);
+  std::vector<int>    tl_prio(total);   // for sorting only
+  std::vector<int>    tl_type(total);   // operation type for scan
+  std::vector<int>    tl_idx(total);
+
+  // Priority assignments depend on query_before_enter:
+  //   death (qbe=0): EXIT_nonlast(0) < ENTER(1) < QUERY(2) < EXIT_last(3)
+  //   recur (qbe=1): QUERY(0)  < EXIT_nonlast(1) < ENTER(2) < EXIT_last(3)
+  int prio_enter, prio_query, prio_exit_nonlast, prio_exit_last;
+  if (query_before_enter) {
+    prio_query        = 0;
+    prio_exit_nonlast = 1;
+    prio_enter        = 2;
+    prio_exit_last    = 3;
+  } else {
+    prio_exit_nonlast = 0;
+    prio_enter        = 1;
+    prio_query        = 2;
+    prio_exit_last    = 3;
+  }
+
+  arma::uword pos = 0;
+
+  // ENTER events
+  for (arma::uword j = 0; j < n_pseudo; j++) {
+    tl_time[pos] = entry_times(j);
+    tl_prio[pos] = prio_enter;
+    tl_type[pos] = 1;   // ENTER
+    tl_idx[pos]  = (int)j;
+    pos++;
+  }
+
+  // EXIT events
+  for (arma::uword j = 0; j < n_pseudo; j++) {
+    tl_time[pos] = exit_times(j);
+    tl_prio[pos] = is_last(j) ? prio_exit_last : prio_exit_nonlast;
+    tl_type[pos] = is_last(j) ? 3 : 0;
+    tl_idx[pos]  = (int)j;
+    pos++;
+  }
+
+  // QUERY events
+  for (arma::uword k = 0; k < ne; k++) {
+    tl_time[pos] = query_times(k);
+    tl_prio[pos] = prio_query;
+    tl_type[pos] = 2;   // QUERY
+    tl_idx[pos]  = (int)k;
+    pos++;
+  }
+
+  // Stable sort by (time, priority)
+  std::vector<arma::uword> order(total);
+  std::iota(order.begin(), order.end(), 0);
+  std::stable_sort(order.begin(), order.end(),
+    [&](arma::uword a, arma::uword b) {
+      if (tl_time[a] != tl_time[b]) return tl_time[a] < tl_time[b];
+      return tl_prio[a] < tl_prio[b];
+    });
+
+  // Write sorted output (operation type, not priority)
+  Rcpp::IntegerVector out_type(total);
+  Rcpp::IntegerVector out_idx(total);
+  for (arma::uword i = 0; i < total; i++) {
+    out_type[i] = tl_type[order[i]];
+    out_idx[i]  = tl_idx[order[i]];
+  }
+
+  return Rcpp::List::create(
+    Rcpp::Named("type") = out_type,
+    Rcpp::Named("idx")  = out_idx,
+    Rcpp::Named("size") = (int)total
+  );
+}
+
+
+// Fast O(n_pseudo) S0t/S1t via precomputed timeline.
+//
+// tl_type, tl_idx: sorted timeline from jfm_precompute_timeline
+// tl_size: length of timeline
+// Z_pseudo: n_pseudo × p covariate matrix
+// coef: p-vector
+// ne: number of query events (output size)
+// n: number of subjects (for /n normalisation)
+//
+// Returns list(S0t = ne-vec, S1t = p × ne matrix), divided by n.
+//
+// [[Rcpp::export(rng = false)]]
+Rcpp::List jfm_s0s1_fast_cpp(
+    const Rcpp::IntegerVector& tl_type,
+    const Rcpp::IntegerVector& tl_idx,
+    int tl_size,
+    const arma::mat& Z_pseudo,
+    const arma::vec& coef,
+    int ne,
+    int n
+) {
+  arma::uword p     = coef.n_elem;
+  arma::uword nrows = Z_pseudo.n_rows;
+
+  // Precompute exp(z' coef) for every pseudo-entry: O(n_pseudo × p)
+  arma::vec exp_lp = arma::exp(Z_pseudo * coef);
+
+  // Running accumulators
+  double run_s0 = 0.0;
+  arma::vec run_s1(p, arma::fill::zeros);
+
+  // Output
+  arma::vec S0t(ne, arma::fill::zeros);
+  arma::mat S1t(p, ne, arma::fill::zeros);
+
+  for (int i = 0; i < tl_size; i++) {
+    int type = tl_type[i];
+    int idx  = tl_idx[i];
+
+    if (type == 1) {
+      // ENTER: add pseudo-entry contribution
+      double e = exp_lp(idx);
+      run_s0 += e;
+      const double* zk = Z_pseudo.memptr() + idx;
+      for (arma::uword l = 0; l < p; l++)
+        run_s1(l) += e * zk[l * nrows];
+
+    } else if (type == 0 || type == 3) {
+      // EXIT: remove pseudo-entry contribution
+      double e = exp_lp(idx);
+      run_s0 -= e;
+      const double* zk = Z_pseudo.memptr() + idx;
+      for (arma::uword l = 0; l < p; l++)
+        run_s1(l) -= e * zk[l * nrows];
+
+    } else {
+      // QUERY: record S0t and S1t
+      S0t(idx)     = run_s0;
+      S1t.col(idx) = run_s1;
+    }
+  }
+
+  double inv_n = 1.0 / (double)n;
+  arma::vec s0t_out = S0t * inv_n;
+  return Rcpp::List::create(
+    Rcpp::Named("S0t") = Rcpp::NumericVector(s0t_out.begin(), s0t_out.end()),
+    Rcpp::Named("S1t") = S1t * inv_n
+  );
+}
+
+
+// Cross-fitted fast S0t/S1t: each pseudo-entry uses the coefficient from
+// its subject's held-out fold.
+//
+// subject_of_entry: n_pseudo int vector, 0-based subject index per entry
+// cv_fold:          n int vector, 0-based fold index per subject
+// coef_mat:         K × p matrix of fold-specific coefficients
+//
+// [[Rcpp::export(rng = false)]]
+Rcpp::List jfm_s0s1_fast_cf_cpp(
+    const Rcpp::IntegerVector& tl_type,
+    const Rcpp::IntegerVector& tl_idx,
+    int tl_size,
+    const arma::mat& Z_pseudo,
+    const arma::mat& coef_mat,
+    const Rcpp::IntegerVector& subject_of_entry,
+    const Rcpp::IntegerVector& cv_fold,
+    int ne,
+    int n
+) {
+  arma::uword p      = coef_mat.n_cols;
+  arma::uword nrows  = Z_pseudo.n_rows;
+  arma::uword npseudo = nrows;
+
+  // Precompute exp(z_j' · coef_{fold(subject(j))}) for each pseudo-entry
+  arma::vec exp_lp(npseudo);
+  for (arma::uword j = 0; j < npseudo; j++) {
+    int subj = subject_of_entry[j];
+    int fold = cv_fold[subj];
+    double lp = arma::dot(Z_pseudo.row(j), coef_mat.row(fold));
+    exp_lp(j) = std::exp(lp);
+  }
+
+  // Running accumulators and scan (same structure as non-CF version)
+  double run_s0 = 0.0;
+  arma::vec run_s1(p, arma::fill::zeros);
+
+  arma::vec S0t(ne, arma::fill::zeros);
+  arma::mat S1t(p, ne, arma::fill::zeros);
+
+  for (int i = 0; i < tl_size; i++) {
+    int type = tl_type[i];
+    int idx  = tl_idx[i];
+
+    if (type == 1) {
+      double e = exp_lp(idx);
+      run_s0 += e;
+      const double* zk = Z_pseudo.memptr() + idx;
+      for (arma::uword l = 0; l < p; l++)
+        run_s1(l) += e * zk[l * nrows];
+
+    } else if (type == 0 || type == 3) {
+      double e = exp_lp(idx);
+      run_s0 -= e;
+      const double* zk = Z_pseudo.memptr() + idx;
+      for (arma::uword l = 0; l < p; l++)
+        run_s1(l) -= e * zk[l * nrows];
+
+    } else {
+      S0t(idx)     = run_s0;
+      S1t.col(idx) = run_s1;
+    }
+  }
+
+  double inv_n = 1.0 / (double)n;
+  arma::vec s0t_out = S0t * inv_n;
+  return Rcpp::List::create(
+    Rcpp::Named("S0t") = Rcpp::NumericVector(s0t_out.begin(), s0t_out.end()),
+    Rcpp::Named("S1t") = S1t * inv_n
+  );
+}
+
+
+// Simplified score using precomputed event pseudo-entry indices.
+//
+// event_pseudo_idx: ne-vector of 0-based pseudo-entry row indices
+// Z_pseudo: n_pseudo × p covariate matrix
+// S1t: p × ne matrix
+// S0t: ne vector
+//
+// Returns p-vector: U = sum_k [z_{event_pseudo_idx[k]} - S1t[:,k]/S0t[k]]
+//
+// [[Rcpp::export(rng = false)]]
+arma::vec jfm_score_fast_cpp(
+    const Rcpp::IntegerVector& event_pseudo_idx,
+    const arma::mat& Z_pseudo,
+    const arma::mat& S1t,
+    const arma::vec& S0t
+) {
+  arma::uword ne = S0t.n_elem;
+  arma::uword p  = S1t.n_rows;
+  arma::vec U(p, arma::fill::zeros);
+
+  arma::uword nrows = Z_pseudo.n_rows;
+  for (arma::uword i = 0; i < ne; i++) {
+    arma::uword k = (arma::uword)event_pseudo_idx[i];
+    double inv_s0 = 1.0 / S0t(i);
+    const double* zk = Z_pseudo.memptr() + k;
+    const double* s1 = S1t.colptr(i);
+    double* u_ptr    = U.memptr();
+    for (arma::uword l = 0; l < p; l++)
+      u_ptr[l] += zk[l * nrows] - s1[l] * inv_s0;
+  }
+  return U;
+}

@@ -47,7 +47,7 @@
 #'   \describe{
 #'     \item{S_re}{Matrix of readmission-free survival probabilities
 #'       (rows = subjects, columns = \code{times}).}
-#'     \item{S_de}{Matrix of death survival probabilities.}
+#'     \item{S_de}{Matrix of death-free survival probabilities.}
 #'     \item{times}{Numeric vector of evaluation times.}
 #'     \item{lp_re}{Linear predictors for readmission
 #'       (\eqn{\hat\alpha^\top z_i}).  For JSCM this is the log
@@ -236,7 +236,7 @@ print.swjm_pred <- function(x, ...) {
 #'     selected subject highlighted.
 #'   \item Bar chart of readmission predictor contributions
 #'     \eqn{\hat\alpha_j z_{ij}} (log-hazard scale).
-#'   \item Mortality survival curves with the selected subject highlighted.
+#'   \item Death-free survival curves with the selected subject highlighted.
 #'   \item Bar chart of death predictor contributions \eqn{\hat\beta_j z_{ij}}.
 #' }
 #'
@@ -247,7 +247,7 @@ print.swjm_pred <- function(x, ...) {
 #'     factor \eqn{e^{\hat\alpha^\top z_i}}.
 #'   \item Bar chart of recurrence log time-acceleration contributions
 #'     \eqn{\hat\alpha_j z_{ij}}: positive = events sooner, negative = later.
-#'   \item Mortality survival curves with the selected subject highlighted,
+#'   \item Death-free survival curves with the selected subject highlighted,
 #'     total acceleration factor \eqn{e^{\hat\beta^\top z_i}} in the title.
 #'   \item Bar chart of terminal-event log time-acceleration contributions
 #'     \eqn{\hat\beta_j z_{ij}}.
@@ -359,7 +359,7 @@ plot.swjm_pred <- function(x,
 
   if (x$model == "jfm") {
     surv_re_title  <- "Readmission-free survival"
-    surv_de_title  <- "Survival"
+    surv_de_title  <- "Death-free survival"
     contrib_re_title <- paste0("Readmission log-hazard contributions\n", subj_label)
     contrib_de_title <- paste0("Death log-hazard contributions\n", subj_label)
     ylab_re <- expression(hat(alpha)[j] * z[j])
@@ -372,7 +372,7 @@ plot.swjm_pred <- function(x,
     dir_de       <- if (accel_de > 1) "death sooner"  else "death later"
     surv_re_title  <- paste0("Recurrent event survival (AFT)\n",
                               subj_label, "  [accel: ", accel_re, "x, ", dir_re, "]")
-    surv_de_title  <- paste0("Survival (AFT)\n",
+    surv_de_title  <- paste0("Death-free survival (AFT)\n",
                               subj_label, "  [accel: ", accel_de, "x, ", dir_de, "]")
     contrib_re_title <- paste0("Recurrent event log time-acceleration\n", subj_label)
     contrib_de_title <- paste0("Terminal event log time-acceleration\n", subj_label)

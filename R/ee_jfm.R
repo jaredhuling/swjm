@@ -1103,3 +1103,92 @@ jfm_u4_new <- function(lambda0_d, d_td, n, Y, td, theta, alpha, t.start, I, Z, t
   names(U4) <- 1:length(td)
   return(U4)
 }
+
+
+# ============================================================================
+# Fast O(n_pseudo) EE evaluation helpers
+# ============================================================================
+
+
+#' Compute Exit Times for Pseudo-Entries
+#'
+#' For each row in the sorted pseudo-data matrix, computes the exit time:
+#' non-last entries for a subject exit at the next entry's start time;
+#' the last entry exits at Y_i (the subject's observation time).
+#'
+#' @param pseudo_entries Sorted pseudo data set (from \code{jfm_wt_death}).
+#' @param Y Numeric vector of observation times per subject (length n).
+#'
+#' @return Numeric vector of exit times, one per pseudo-entry row.
+#'
+#' @keywords internal
+jfm_compute_exit_times <- function(pseudo_entries, Y) {
+  n_pseudo <- nrow(pseudo_entries)
+  L <- pseudo_entries[, 1]  # entry (left-truncation) times
+  I <- pseudo_entries[, 2]  # subject indicators (1-based)
+
+  exit_times <- numeric(n_pseudo)
+  subject_rows <- split(seq_len(n_pseudo), I)
+
+  for (subj_id in names(subject_rows)) {
+    rows <- subject_rows[[subj_id]]
+    s <- as.integer(subj_id)
+    nr <- length(rows)
+    if (nr == 1L) {
+      exit_times[rows] <- Y[s]
+    } else {
+      # Non-last entries exit at the next entry's start time
+      exit_times[rows[-nr]] <- L[rows[-1L]]
+      # Last entry exits at Y_i
+      exit_times[rows[nr]] <- Y[s]
+    }
+  }
+  exit_times
+}
+
+
+#' Flag Last Pseudo-Entry per Subject
+#'
+#' Returns a logical vector indicating whether each pseudo-entry is the
+#' last entry for its subject. Used for tie-breaking in timeline construction.
+#'
+#' @param pseudo_entries Sorted pseudo data set (from \code{jfm_wt_death}).
+#'
+#' @return Logical vector, one per pseudo-entry row.
+#'
+#' @keywords internal
+jfm_compute_is_last <- function(pseudo_entries) {
+  n_pseudo <- nrow(pseudo_entries)
+  I <- pseudo_entries[, 2]
+  is_last <- logical(n_pseudo)
+  subject_rows <- split(seq_len(n_pseudo), I)
+  for (rows in subject_rows) {
+    is_last[rows[length(rows)]] <- TRUE
+  }
+  is_last
+}
+
+
+#' Extract Event Pseudo-Entry Indices
+#'
+#' For each event time, extracts the pseudo-entry row index for the subject
+#' who experienced the event. Returns a 0-based integer vector suitable for
+#' passing to C++ score functions.
+#'
+#' @param index_matrix The n x ne index matrix (1-based row indices into
+#'   pseudo_entries), either \code{index_death_matrix} or
+#'   \code{index_recurrent_matrix}.
+#' @param event_subject_ids Integer vector (length ne) of 1-based subject IDs
+#'   who experienced each event (e.g., td_id or tr_id).
+#'
+#' @return Integer vector (length ne) of 0-based pseudo-entry row indices.
+#'
+#' @keywords internal
+jfm_event_pseudo_idx <- function(index_matrix, event_subject_ids) {
+  ne <- length(event_subject_ids)
+  idx <- integer(ne)
+  for (k in seq_len(ne)) {
+    idx[k] <- index_matrix[event_subject_ids[k], k] - 1L
+  }
+  idx
+}

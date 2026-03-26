@@ -209,32 +209,40 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
   td_id    <- A$td_id
   index_death_matrix    <- A$index_death_matrix
   pseudo_entries        <- A$pseudo_entries
-  wt_matrix             <- matrix(1, nrow = n, ncol = length(td))
 
   # Pre-extract covariate block and sorted event times (used every iteration)
   Z_pseudo  <- pseudo_entries[, 3:ncol(pseudo_entries), drop = FALSE]
   td_sorted <- sort(td)
-  # tr_id: 0-based subject index per recurrent event (for C++ score)
-  # td_id: same for death -- computed after wt_death call above
-  td_id0    <- td_id - 1L   # 0-based
-
-  res_de <- jfm_s0s1_cpp(Y, wt_matrix, td_sorted, index_death_matrix,
-                          Z_pseudo, beta)
-  S0t_de <- res_de$S0t
-  lambda0_d <- jfm_lambda0d_solution(td, d_td, n, S0t_de)
+  tr_sorted <- sort(tr)
 
   diff_tr1 <- diff(c(0, tr[order(tr)]))
   lambda0_r <- diff_tr1 * 1
-
   B <- jfm_r2i_integral(t.start, I, Z, alpha, tr, lambda0_r, tr.id)
   index_recurrent_matrix <- B$index_recurrent_matrix
   tr_id  <- B$tr_id
-  tr_id0 <- tr_id - 1L   # 0-based
-  tr_sorted <- sort(tr)
-  wt_recurrent_subject <- matrix(1, nrow = n, ncol = length(tr))
 
-  res_re <- jfm_s0s1_cpp(Y, wt_recurrent_subject, tr_sorted,
-                          index_recurrent_matrix, Z_pseudo, alpha)
+  # --- Precompute timelines and event indices (one-time cost) ---
+  exit_times <- jfm_compute_exit_times(pseudo_entries, Y)
+  is_last    <- as.integer(jfm_compute_is_last(pseudo_entries))
+  entry_times <- pseudo_entries[, 1]
+  tl_death <- jfm_precompute_timeline(entry_times, exit_times, is_last,
+                                       td_sorted, 0L)
+  tl_recur <- jfm_precompute_timeline(entry_times, exit_times, is_last,
+                                       tr_sorted, 1L)
+  de_epi <- jfm_event_pseudo_idx(index_death_matrix, td_id)
+  re_epi <- jfm_event_pseudo_idx(index_recurrent_matrix, tr_id)
+
+  n_de <- length(td)
+  n_re <- length(tr)
+
+  # Initial S0t/S1t via fast timeline scan
+  res_de <- jfm_s0s1_fast_cpp(tl_death$type, tl_death$idx, tl_death$size,
+                                Z_pseudo, beta, n_de, n)
+  S0t_de <- res_de$S0t
+  lambda0_d <- jfm_lambda0d_solution(td, d_td, n, S0t_de)
+
+  res_re <- jfm_s0s1_fast_cpp(tl_recur$type, tl_recur$idx, tl_recur$size,
+                                Z_pseudo, alpha, n_re, n)
   S0t_re <- res_re$S0t
   lambda0_r <- jfm_lambda0r_solution(tr, d_tr, n, S0t_re)
 
@@ -243,11 +251,9 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
   thetaK <- c(initial_alpha, initial_beta)
   normK <- 0
 
-  # Compute initial gradients using combined C++ calls
-  g1 <- (-1) * jfm_score_cpp(index_recurrent_matrix, tr_id0,
-                               Z_pseudo, res_re$S1t, S0t_re) / n
-  g2 <- (-1) * jfm_score_cpp(index_death_matrix, td_id0,
-                               Z_pseudo, res_de$S1t, S0t_de) / n
+  # Compute initial gradients using fast score
+  g1 <- (-1) * jfm_score_fast_cpp(re_epi, Z_pseudo, res_re$S1t, S0t_re) / n
+  g2 <- (-1) * jfm_score_fast_cpp(de_epi, Z_pseudo, res_de$S1t, S0t_de) / n
 
   # Gradient scaling: scale death (g2) up by max|g1|/max|g2|
   if (penalty %in% c("coop", "group")) {
@@ -295,14 +301,14 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
     alpha <- thetaK[1:p]         # recurrence
     beta  <- thetaK[(p + 1):(2 * p)]  # death
 
-    # Update baseline hazards + recompute gradients in combined C++ calls
-    res_de <- jfm_s0s1_cpp(Y, wt_matrix, td_sorted, index_death_matrix,
-                            Z_pseudo, beta)
+    # Update baseline hazards + recompute gradients via fast timeline scan
+    res_de <- jfm_s0s1_fast_cpp(tl_death$type, tl_death$idx, tl_death$size,
+                                  Z_pseudo, beta, n_de, n)
     S0t_de    <- res_de$S0t
     lambda0_d <- jfm_lambda0d_solution(td, d_td, n, S0t_de)
 
-    res_re <- jfm_s0s1_cpp(Y, wt_recurrent_subject, tr_sorted,
-                            index_recurrent_matrix, Z_pseudo, alpha)
+    res_re <- jfm_s0s1_fast_cpp(tl_recur$type, tl_recur$idx, tl_recur$size,
+                                  Z_pseudo, alpha, n_re, n)
     S0t_re    <- res_re$S0t
     lambda0_r <- jfm_lambda0r_solution(tr, d_tr, n, S0t_re)
 
@@ -310,11 +316,9 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
     normK <- coop_norm(thetaK, p)
     normK_update[k + 1] <- normK
 
-    # Scores from the same C++ call results
-    g1 <- (-1) * jfm_score_cpp(index_recurrent_matrix, tr_id0,
-                                 Z_pseudo, res_re$S1t, S0t_re) / n
-    g2 <- (-1) * jfm_score_cpp(index_death_matrix, td_id0,
-                                 Z_pseudo, res_de$S1t, S0t_de) / n
+    # Scores via fast score
+    g1 <- (-1) * jfm_score_fast_cpp(re_epi, Z_pseudo, res_re$S1t, S0t_re) / n
+    g2 <- (-1) * jfm_score_fast_cpp(de_epi, Z_pseudo, res_de$S1t, S0t_de) / n
 
     # Gradient scaling: scale death (g2) up
     if (penalty %in% c("coop", "group")) {

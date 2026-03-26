@@ -293,33 +293,44 @@ cv_jfm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
   td_id              <- A$td_id
   index_death_matrix <- A$index_death_matrix
   pseudo_entries     <- A$pseudo_entries
-  wt_matrix          <- matrix(1, nrow = n, ncol = length(td))
 
   diff_tr1       <- diff(c(0, tr[order(tr)]))
   lambda0_r_init <- diff_tr1 * 1
   B <- jfm_r2i_integral(t.start, I, Z, beta0, tr, lambda0_r_init, tr.id)
   index_recurrent_matrix <- B$index_recurrent_matrix
   tr_id                  <- B$tr_id
-  wt_recurrent_subject   <- matrix(1, nrow = n, ncol = length(tr))
 
   # Pre-extract shared objects used in the hot CV loop
   Z_pseudo  <- pseudo_entries[, 3:ncol(pseudo_entries), drop = FALSE]
   td_sorted <- sort(td)
   tr_sorted <- sort(tr)
-  td_id0    <- td_id - 1L   # 0-based for C++ score
-  tr_id0    <- tr_id - 1L
   # cv_fold: 0-based fold assignment indexed by subject ID (test_inx[subj, 1])
   cv_fold   <- as.integer(test_inx[, 1]) - 1L   # 0-based
 
-  # Scaling factor from null model (C++ combined call)
-  res_de0 <- jfm_s0s1_cpp(Y, wt_matrix, td_sorted, index_death_matrix,
-                            Z_pseudo, beta0)
-  res_re0 <- jfm_s0s1_cpp(Y, wt_recurrent_subject, tr_sorted,
-                            index_recurrent_matrix, Z_pseudo, alpha0)
-  g10 <- (-1) * jfm_score_cpp(index_recurrent_matrix, tr_id0,
-                                Z_pseudo, res_re0$S1t, res_re0$S0t) / n
-  g20 <- (-1) * jfm_score_cpp(index_death_matrix, td_id0,
-                                Z_pseudo, res_de0$S1t, res_de0$S0t) / n
+  # --- Precompute timelines and event indices (one-time cost) ---
+  exit_times <- jfm_compute_exit_times(pseudo_entries, Y)
+  is_last    <- as.integer(jfm_compute_is_last(pseudo_entries))
+  entry_times <- pseudo_entries[, 1]
+  tl_death <- jfm_precompute_timeline(entry_times, exit_times, is_last,
+                                       td_sorted, 0L)
+  tl_recur <- jfm_precompute_timeline(entry_times, exit_times, is_last,
+                                       tr_sorted, 1L)
+  de_epi <- jfm_event_pseudo_idx(index_death_matrix, td_id)
+  re_epi <- jfm_event_pseudo_idx(index_recurrent_matrix, tr_id)
+  subject_of_entry <- as.integer(pseudo_entries[, 2]) - 1L  # 0-based
+
+  n_de <- length(td)
+  n_re <- length(tr)
+
+  # Scaling factor from null model
+  res_de0 <- jfm_s0s1_fast_cpp(tl_death$type, tl_death$idx, tl_death$size,
+                                 Z_pseudo, beta0, n_de, n)
+  res_re0 <- jfm_s0s1_fast_cpp(tl_recur$type, tl_recur$idx, tl_recur$size,
+                                 Z_pseudo, alpha0, n_re, n)
+  g10 <- (-1) * jfm_score_fast_cpp(re_epi, Z_pseudo, res_re0$S1t,
+                                     res_re0$S0t) / n
+  g20 <- (-1) * jfm_score_fast_cpp(de_epi, Z_pseudo, res_de0$S1t,
+                                     res_de0$S0t) / n
   c1 <- max(abs(g10)) / max(abs(g20))
 
   # Cross-fitted score norms
@@ -335,18 +346,18 @@ cv_jfm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
       beta_mat[qq, ]  <- theta_lambda_list[[qq]][(p + 1):(2 * p), j]
     }
 
-    # C++ cross-fitted S0t+S1t (one call replaces four R loops each)
-    res_de_cf <- jfm_s0s1_cf_cpp(Y, wt_matrix, td_sorted,
-                                   index_death_matrix, Z_pseudo,
-                                   beta_mat, cv_fold)
-    res_re_cf <- jfm_s0s1_cf_cpp(Y, wt_recurrent_subject, tr_sorted,
-                                   index_recurrent_matrix, Z_pseudo,
-                                   alpha_mat, cv_fold)
+    # Fast cross-fitted S0t+S1t via timeline scan
+    res_de_cf <- jfm_s0s1_fast_cf_cpp(tl_death$type, tl_death$idx,
+                                        tl_death$size, Z_pseudo, beta_mat,
+                                        subject_of_entry, cv_fold, n_de, n)
+    res_re_cf <- jfm_s0s1_fast_cf_cpp(tl_recur$type, tl_recur$idx,
+                                        tl_recur$size, Z_pseudo, alpha_mat,
+                                        subject_of_entry, cv_fold, n_re, n)
 
-    g1 <- (-1) * jfm_score_cpp(index_recurrent_matrix, tr_id0,
-                                 Z_pseudo, res_re_cf$S1t, res_re_cf$S0t) / n
-    g2 <- (-1) * jfm_score_cpp(index_death_matrix, td_id0,
-                                 Z_pseudo, res_de_cf$S1t, res_de_cf$S0t) / n
+    g1 <- (-1) * jfm_score_fast_cpp(re_epi, Z_pseudo, res_re_cf$S1t,
+                                      res_re_cf$S0t) / n
+    g2 <- (-1) * jfm_score_fast_cpp(de_epi, Z_pseudo, res_de_cf$S1t,
+                                      res_de_cf$S0t) / n
     g2_origin <- g2
     g2 <- g2 * c1
 

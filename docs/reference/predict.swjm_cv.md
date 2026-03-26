@@ -42,7 +42,7 @@ An object of class `"swjm_pred"`, a list with:
 
 - S_de:
 
-  Matrix of death survival probabilities.
+  Matrix of death-free survival probabilities.
 
 - times:
 

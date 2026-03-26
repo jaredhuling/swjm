@@ -345,16 +345,22 @@ lambda0_r_gen <- function(Data2, alpha) {
 
   A <- jfm_wt_death(theta, beta0, t.start, I, Z, td, lambda0_d_init, td.id)
   pseudo_entries <- A$pseudo_entries
+  Z_pseudo <- pseudo_entries[, 3:ncol(pseudo_entries), drop = FALSE]
 
   diff_tr1 <- diff(c(0, tr[order(tr)]))
   lambda0_r_init <- diff_tr1 * 1
   B <- jfm_r2i_integral(t.start, I, Z, alpha, tr, lambda0_r_init, tr.id)
-  index_recurrent_matrix <- B$index_recurrent_matrix
 
-  wt_recurrent_subject <- matrix(1, nrow = n, ncol = length(tr))
-  S0t_re <- jfm_s0t_recurrent(Y, wt_recurrent_subject, tr,
-                               index_recurrent_matrix, pseudo_entries, alpha)
-  jfm_lambda0r_solution(tr, d_tr, n, S0t_re)
+  exit_times  <- jfm_compute_exit_times(pseudo_entries, Y)
+  is_last     <- as.integer(jfm_compute_is_last(pseudo_entries))
+  entry_times <- pseudo_entries[, 1]
+  tr_sorted   <- sort(tr)
+  tl_recur <- jfm_precompute_timeline(entry_times, exit_times, is_last,
+                                       tr_sorted, 1L)
+
+  res_re <- jfm_s0s1_fast_cpp(tl_recur$type, tl_recur$idx, tl_recur$size,
+                                Z_pseudo, alpha, length(tr), n)
+  jfm_lambda0r_solution(tr, d_tr, n, res_re$S0t)
 }
 
 
@@ -384,25 +390,32 @@ lambda0_gen <- function(Data2, alpha, beta) {
 
   A <- jfm_wt_death(theta, beta0, t.start, I, Z, td,
                      lambda0_d_init, td.id)
-  td_id <- A$td_id
-  index_death_matrix <- A$index_death_matrix
   pseudo_entries <- A$pseudo_entries
-  wt_matrix <- matrix(1, nrow = n, ncol = length(td))
-
-  # alpha = recurrence, beta = death
-  S0t_de <- jfm_s0t_death(Y, wt_matrix, td, index_death_matrix,
-                           pseudo_entries, beta)
-  lambda0_d <- jfm_lambda0d_solution(td, d_td, n, S0t_de)
+  Z_pseudo <- pseudo_entries[, 3:ncol(pseudo_entries), drop = FALSE]
 
   diff_tr1 <- diff(c(0, tr[order(tr)]))
   lambda0_r_init <- diff_tr1 * 1
   B <- jfm_r2i_integral(t.start, I, Z, alpha, tr, lambda0_r_init, tr.id)
-  index_recurrent_matrix <- B$index_recurrent_matrix
 
-  wt_recurrent_subject <- matrix(1, nrow = n, ncol = length(tr))
-  S0t_re <- jfm_s0t_recurrent(Y, wt_recurrent_subject, tr,
-                               index_recurrent_matrix, pseudo_entries, alpha)
-  lambda0_r <- jfm_lambda0r_solution(tr, d_tr, n, S0t_re)
+  exit_times  <- jfm_compute_exit_times(pseudo_entries, Y)
+  is_last     <- as.integer(jfm_compute_is_last(pseudo_entries))
+  entry_times <- pseudo_entries[, 1]
+  td_sorted   <- sort(td)
+  tr_sorted   <- sort(tr)
+
+  tl_death <- jfm_precompute_timeline(entry_times, exit_times, is_last,
+                                       td_sorted, 0L)
+  tl_recur <- jfm_precompute_timeline(entry_times, exit_times, is_last,
+                                       tr_sorted, 1L)
+
+  # alpha = recurrence, beta = death
+  res_de <- jfm_s0s1_fast_cpp(tl_death$type, tl_death$idx, tl_death$size,
+                                Z_pseudo, beta, length(td), n)
+  lambda0_d <- jfm_lambda0d_solution(td, d_td, n, res_de$S0t)
+
+  res_re <- jfm_s0s1_fast_cpp(tl_recur$type, tl_recur$idx, tl_recur$size,
+                                Z_pseudo, alpha, length(tr), n)
+  lambda0_r <- jfm_lambda0r_solution(tr, d_tr, n, res_re$S0t)
 
   list(lambda0_r = lambda0_r, lambda0_d = lambda0_d)
 }

@@ -33,3 +33,19 @@ jfm_score_cpp <- function(idx_mat, event_id, Z_pseudo, S1t, S0t) {
     .Call(`_swjm_jfm_score_cpp`, idx_mat, event_id, Z_pseudo, S1t, S0t)
 }
 
+jfm_precompute_timeline <- function(entry_times, exit_times, is_last, query_times, query_before_enter = 0L) {
+    .Call(`_swjm_jfm_precompute_timeline`, entry_times, exit_times, is_last, query_times, query_before_enter)
+}
+
+jfm_s0s1_fast_cpp <- function(tl_type, tl_idx, tl_size, Z_pseudo, coef, ne, n) {
+    .Call(`_swjm_jfm_s0s1_fast_cpp`, tl_type, tl_idx, tl_size, Z_pseudo, coef, ne, n)
+}
+
+jfm_s0s1_fast_cf_cpp <- function(tl_type, tl_idx, tl_size, Z_pseudo, coef_mat, subject_of_entry, cv_fold, ne, n) {
+    .Call(`_swjm_jfm_s0s1_fast_cf_cpp`, tl_type, tl_idx, tl_size, Z_pseudo, coef_mat, subject_of_entry, cv_fold, ne, n)
+}
+
+jfm_score_fast_cpp <- function(event_pseudo_idx, Z_pseudo, S1t, S0t) {
+    .Call(`_swjm_jfm_score_fast_cpp`, event_pseudo_idx, Z_pseudo, S1t, S0t)
+}
+
