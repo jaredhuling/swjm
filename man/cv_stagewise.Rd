@@ -12,7 +12,8 @@ cv_stagewise(
   lambda_seq = NULL,
   eps = NULL,
   max_iter = NULL,
-  pp = NULL
+  pp = NULL,
+  estimate_frailty = FALSE
 )
 }
 \arguments{
@@ -34,6 +35,10 @@ from a full-data stagewise fit.}
 \item{max_iter}{Integer. Maximum iterations (passed to \code{stagewise_fit}).}
 
 \item{pp}{Integer. Early-stop block size (passed to \code{stagewise_fit}).}
+
+\item{estimate_frailty}{Logical. For JFM only: if \code{TRUE}, estimates
+the frailty variance and uses frailty weights in the estimating equations
+(passed to \code{stagewise_fit}).}
 }
 \value{
 An object of class \code{"swjm_cv"}, a list with components:

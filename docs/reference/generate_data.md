@@ -34,7 +34,8 @@ generate_data(n, p, scenario = 1, model = c("jfm", "jscm"), ...)
 - ...:
 
   Additional arguments passed to the model-specific function. For JFM:
-  `b`, `lambda0_d`, `lambda0_r`. For JSCM: `b`.
+  `b`, `lambda0_d`, `lambda0_r`, `gamma_frailty`, `cov_type`. For JSCM:
+  `b`.
 
 ## Value
 

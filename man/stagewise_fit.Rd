@@ -10,7 +10,8 @@ stagewise_fit(
   penalty = c("coop", "lasso", "group"),
   eps = NULL,
   max_iter = NULL,
-  pp = NULL
+  pp = NULL,
+  estimate_frailty = FALSE
 )
 }
 \arguments{
@@ -30,6 +31,11 @@ uses adaptive step size.}
 
 \item{pp}{Integer. Early-stopping block size: algorithm checks every
 \code{pp} iterations if fewer than 3 unique coordinates were updated.}
+
+\item{estimate_frailty}{Logical. For JFM only: if \code{TRUE}, estimates
+the frailty variance and uses the Kalbfleisch et al. (2013) frailty
+weights \eqn{w_i(t)} in the estimating equations. If \code{FALSE}
+(default), uses unit weights (simplified model without frailty).}
 }
 \value{
 An object of class \code{"swjm_path"}, a list with components:

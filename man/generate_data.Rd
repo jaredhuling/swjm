@@ -19,7 +19,8 @@ scenarios 1--3).}
 or \code{"jscm"} for the joint scale-change model.}
 
 \item{...}{Additional arguments passed to the model-specific function.
-For JFM: \code{b}, \code{lambda0_d}, \code{lambda0_r}.
+For JFM: \code{b}, \code{lambda0_d}, \code{lambda0_r}, \code{gamma_frailty},
+\code{cov_type}.
 For JSCM: \code{b}.}
 }
 \value{

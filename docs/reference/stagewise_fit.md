@@ -14,7 +14,8 @@ stagewise_fit(
   penalty = c("coop", "lasso", "group"),
   eps = NULL,
   max_iter = NULL,
-  pp = NULL
+  pp = NULL,
+  estimate_frailty = FALSE
 )
 ```
 
@@ -47,6 +48,13 @@ stagewise_fit(
 
   Integer. Early-stopping block size: algorithm checks every `pp`
   iterations if fewer than 3 unique coordinates were updated.
+
+- estimate_frailty:
+
+  Logical. For JFM only: if `TRUE`, estimates the frailty variance and
+  uses the Kalbfleisch et al. (2013) frailty weights \\w_i(t)\\ in the
+  estimating equations. If `FALSE` (default), uses unit weights
+  (simplified model without frailty).
 
 ## Value
 

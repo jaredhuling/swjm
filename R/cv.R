@@ -19,6 +19,9 @@
 #' @param eps Numeric. Step size (passed to \code{stagewise_fit}).
 #' @param max_iter Integer. Maximum iterations (passed to \code{stagewise_fit}).
 #' @param pp Integer. Early-stop block size (passed to \code{stagewise_fit}).
+#' @param estimate_frailty Logical. For JFM only: if \code{TRUE}, estimates
+#'   the frailty variance and uses frailty weights in the estimating equations
+#'   (passed to \code{stagewise_fit}).
 #'
 #' @return An object of class \code{"swjm_cv"}, a list with components:
 #'   \describe{
@@ -51,7 +54,8 @@
 cv_stagewise <- function(data, model = c("jfm", "jscm"),
                          penalty = c("coop", "lasso", "group"),
                          K = 5L, lambda_seq = NULL,
-                         eps = NULL, max_iter = NULL, pp = NULL) {
+                         eps = NULL, max_iter = NULL, pp = NULL,
+                         estimate_frailty = FALSE) {
   model <- match.arg(model)
   penalty <- match.arg(penalty)
 
@@ -72,7 +76,8 @@ cv_stagewise <- function(data, model = c("jfm", "jscm"),
 
   # Always run full-data fit (needed for coef extraction)
   full_fit <- stagewise_fit(data, model = model, penalty = penalty,
-                            eps = eps, max_iter = max_iter, pp = pp)
+                            eps = eps, max_iter = max_iter, pp = pp,
+                            estimate_frailty = estimate_frailty)
 
   if (is.null(lambda_seq)) {
     lambda_seq <- full_fit$lambda
@@ -84,7 +89,8 @@ cv_stagewise <- function(data, model = c("jfm", "jscm"),
   if (model == "jfm") {
     result <- cv_jfm(data, penalty, lambda_seq, K, initial_alpha,
                      initial_beta, eps1 = 1e-6, adap = 1L, eps2 = eps,
-                     iter = max_iter, pp = pp)
+                     iter = max_iter, pp = pp,
+                     estimate_frailty = estimate_frailty)
   } else {
     result <- cv_jscm(data, penalty, lambda_seq, K, initial_alpha,
                       initial_beta, eps1 = 1e-6, adap = 1L, eps2 = eps,
@@ -234,7 +240,8 @@ summary.swjm_cv <- function(object, ...) {
 
 #' @keywords internal
 cv_jfm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
-                   initial_beta, eps1, adap, eps2, iter, pp) {
+                   initial_beta, eps1, adap, eps2, iter, pp,
+                   estimate_frailty = FALSE) {
   p <- ncol(Data2) - 5L
   n1 <- length(unique(Data2$id))
 
@@ -256,7 +263,8 @@ cv_jfm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
 
     # Train on fold
     results_tr <- stagewise_jfm(initial_alpha, initial_beta, Data2_tr,
-                                penalty, eps1, adap, eps2, iter, pp)
+                                penalty, eps1, adap, eps2, iter, pp,
+                                estimate_frailty = estimate_frailty)
 
     lambda_seq_tr <- results_tr$lambda
     theta_tr <- results_tr$theta_update
