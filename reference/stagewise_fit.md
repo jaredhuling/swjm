@@ -88,9 +88,9 @@ fit
 #> 
 #>   Covariates (p):            10
 #>   Iterations:                100
-#>   Lambda range:              [1.12, 1.425]
-#>   Active at final step:      4 readmission, 4 death
-#>     Readmission (alpha): 3, 4, 9, 10
-#>     Death (beta):        3, 4, 9, 10
+#>   Lambda range:              [2.009, 2.172]
+#>   Active at final step:      1 readmission, 1 death
+#>     Readmission (alpha): 9
+#>     Death (beta):        9
 # }
 ```

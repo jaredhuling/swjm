@@ -116,20 +116,27 @@ yielding time-dependent covariates. Censoring times are
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="fu">generate_data_jfm</span><span class="op">(</span>n <span class="op">=</span> <span class="fl">30</span>, p <span class="op">=</span> <span class="fl">10</span>, scenario <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">dat</span><span class="op">$</span><span class="va">data</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   id    t.start     t.stop event status          x1         x2         x3</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1  1 0.00000000 0.08852674     1      0 -0.04283746 -1.2815593  0.9675822</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2  1 0.08852674 5.88543210     0      0 -1.45677852  0.2343405 -0.9515281</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3  2 0.00000000 0.02702974     1      0 -0.05814550  1.4905300  0.2675769</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4  2 0.02702974 1.96994382     0      0 -2.20710605  0.8953441 -0.5710303</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5  3 0.00000000 4.66633902     1      0  0.85504041  0.9297268 -0.5114203</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6  3 4.66633902 4.77357336     1      0 -0.11534663  0.4029612 -1.3295532</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>           x4         x5         x6         x7          x8         x9        x10</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1  1.0290489 -2.1664253 -0.3033482  0.1792680  1.42739582 -0.6199466 -0.1318424</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2  1.8984394 -1.0427705 -1.3337463  1.7647248  0.50606343 -0.6552922  0.6675088</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3 -0.3105904 -0.1514627  0.0889827 -1.4503736  0.84298116  1.3602523 -1.4819821</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4  0.8030739 -0.1511729 -0.1165839 -0.3122022 -0.08643189 -0.3113840 -0.5994553</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5  0.5756067 -1.1797607  0.8739227  0.7526550  0.63195295  0.4890517  0.4934662</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6  0.8500323  1.1056819  0.4041419 -0.1231415  0.44884772  2.0681537 -1.2495368</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   id   t.start    t.stop event status          x1         x2          x3</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1  1 0.0000000 0.3841453     1      0  0.26535479  0.6190669  0.47108084</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2  1 0.3841453 2.0762212     1      0 -0.66046112 -0.1490251 -0.87548530</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3  1 2.0762212 2.1639101     1      0 -0.63081925 -0.9535960 -0.07998247</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4  1 2.1639101 2.2749376     1      0 -0.54249536 -2.0945782  0.37805006</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5  1 2.2749376 6.2244180     0      0 -0.05013821  2.2803904  1.37981056</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6  2 0.0000000 0.5320308     1      0  0.04422852  0.6270975 -0.94724955</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           x4          x5          x6          x7         x8         x9</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1  0.4631442 -0.16016136 -0.03568547 -0.57468482  0.8453500 -0.5817661</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2  1.6990016  0.06819026  0.53318758 -0.08094899  2.4467814  0.3838990</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3  1.0626959  1.35105684  0.23329022  0.33389879 -0.7647703  0.7693845</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4 -0.7059342 -0.58710453  0.10008636  1.20206636  0.6598440 -0.6267454</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5 -0.5736360 -1.41683743 -1.24490746  0.90008248  1.9894303 -2.7869753</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6 -1.1228269 -0.02032365  1.22502554  0.08305898 -1.8859152  1.0569271</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>          x10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 -0.5023571</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 -1.0521716</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 -0.2150130</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4 -0.5297761</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5 -0.0231353</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6  0.6129122</span>
 <span class="r-in"><span><span class="va">dat</span><span class="op">$</span><span class="va">alpha_true</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  [1]  1.1 -1.1  0.1 -0.1  0.0  0.0  0.0  0.0  1.0 -1.0</span>
 <span class="r-in"><span><span class="va">dat</span><span class="op">$</span><span class="va">beta_true</span></span></span>
