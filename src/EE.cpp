@@ -25,25 +25,42 @@ arma::rowvec am1(const arma::vec& a,
 
   arma::uword const nm = accu(m);
   arma::uword const n  = X.n_rows;
-  arma::uword const p  = X.n_cols;
   arma::vec m2 = cumsum(m);
 
-  arma::mat Xi(nm, p, arma::fill::zeros);
-  arma::vec Yi(nm, arma::fill::zeros);
-  arma::vec T0 = log(Y) + X * a;
+  // Compute per-subject linear predictor once: O(n × p)
+  arma::vec Xa = X * a;  // n-vector
+  arma::vec T0 = log(Y) + Xa;
+
+  // Expand to per-event vectors without building nm × p matrix Xi
+  arma::vec texa(nm);
+  arma::vec yexa(nm);
+  // subject_of_event[j] maps expanded event j to subject index
+  arma::uvec subject_of_event(nm);
   arma::uword const mn = m.n_elem;
   for (arma::uword i = 0; i < mn; i++) {
-    if (i == 0 && m(i) > 0) {
-      Yi.subvec(0, m2(i) - 1).fill(Y(i));
-      Xi.submat(0, 0, m2(i) - 1, p - 1) = repmat(X.row(i), m(i), 1);
-    }
-    if (i > 0 && m(i) > 0) {
-      Yi.subvec(m2(i - 1), m2(i) - 1).fill(Y(i));
-      Xi.submat(m2(i - 1), 0, m2(i) - 1, p - 1) = repmat(X.row(i), m(i), 1);
+    arma::uword start = (i == 0) ? 0 : (arma::uword)m2(i - 1);
+    arma::uword end   = (arma::uword)m2(i) - 1;
+    if (m(i) > 0) {
+      double yi_val = log(Y(i)) + Xa(i);
+      for (arma::uword j = start; j <= end; j++) {
+        yexa(j) = yi_val;
+        subject_of_event(j) = i;
+      }
     }
   }
-  arma::vec texa = log(T) + Xi * a;
-  arma::vec yexa = log(Yi) + Xi * a;
+  // texa needs the per-event recurrent time + per-subject Xa
+  // T is the vector of all recurrent event times; T[j]'s subject is subject_of_event[j]
+  // But the original Xi*a = Xa[subject_of_event[j]] for each j
+  {
+    arma::uword pos = 0;
+    for (arma::uword i = 0; i < mn; i++) {
+      double xa_i = Xa(i);
+      for (arma::uword j = 0; j < (arma::uword)m(i); j++) {
+        texa(pos) = log(T(pos)) + xa_i;
+        pos++;
+      }
+    }
+  }
   arma::vec Lam(n, arma::fill::zeros);
   arma::vec de(nm, arma::fill::zeros);
   arma::uvec const idx = arma::sort_index(texa);
@@ -119,13 +136,20 @@ arma::rowvec temLog(const arma::vec& a,
   arma::uvec ind = stable_sort_index(yexa, "descend");
   arma::vec ordD = D(ind);
   arma::vec ordW = W(ind);
-  arma::mat xz = X % repmat(ebaxZ, 1, p);
-  xz = cumsum(xz.rows(ind), 0);
-  arma::mat c1 = X.rows(ind);
-  arma::vec tmp = cumsum(ebaxZ(ind));
-  arma::mat r = c1 - xz / repmat(tmp, 1, p);
-  r.replace(arma::datum::nan, 0);
-  return sum(repmat(ordW % ordD, 1, p) % r, 0) / n;
+  arma::vec ordEbax = ebaxZ(ind);
+  arma::vec tmp = cumsum(ordEbax);
+  arma::vec wd = ordW % ordD;
+
+  // Avoid repmat: compute column-by-column
+  arma::rowvec result(p, arma::fill::zeros);
+  for (int j = 0; j < p; j++) {
+    arma::vec xj = X.col(j);
+    arma::vec xz_j = cumsum(xj(ind) % ordEbax);
+    arma::vec r_j = xj(ind) - xz_j / tmp;
+    r_j.replace(arma::datum::nan, 0);
+    result(j) = arma::dot(wd, r_j);
+  }
+  return result / n;
 }
 
 // -------------------- temLog2 --------------------
@@ -141,13 +165,19 @@ arma::rowvec temLog2(const arma::vec& yexa,
   arma::uvec ind = stable_sort_index(yexa, "descend");
   arma::vec ordD = D(ind);
   arma::vec ordW = W(ind);
-  arma::mat xz = X % repmat(Z, 1, p);
-  xz = cumsum(xz.rows(ind), 0);
-  arma::mat c1 = X.rows(ind);
-  arma::vec tmp = cumsum(Z(ind));
-  arma::mat r = c1 - xz / repmat(tmp, 1, p);
-  r.replace(arma::datum::nan, 0);
-  return sum(repmat(ordW % ordD, 1, p) % r, 0) / n;
+  arma::vec ordZ = Z(ind);
+  arma::vec tmp = cumsum(ordZ);
+  arma::vec wd = ordW % ordD;
+
+  arma::rowvec result(p, arma::fill::zeros);
+  for (int j = 0; j < p; j++) {
+    arma::vec xj = X.col(j);
+    arma::vec xz_j = cumsum(xj(ind) % ordZ);
+    arma::vec r_j = xj(ind) - xz_j / tmp;
+    r_j.replace(arma::datum::nan, 0);
+    result(j) = arma::dot(wd, r_j);
+  }
+  return result / n;
 }
 
 // -------------------- reRate --------------------
