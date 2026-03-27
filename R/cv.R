@@ -292,40 +292,36 @@ cv_jfm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
   Y <- dc$Y; STATUS <- dc$STATUS
   t.start <- dc$t.start; I <- dc$I
 
+  alpha0 <- beta0 <- numeric(p)
   lambda0_d_init <- rep(0.2, length(td))
   theta_param <- 1
-  alpha0 <- beta0 <- numeric(p)
 
-  A <- jfm_wt_death(theta_param, alpha0, t.start, I, Z, td,
-                     lambda0_d_init, td.id)
-  td_id              <- A$td_id
-  index_death_matrix <- A$index_death_matrix
-  pseudo_entries     <- A$pseudo_entries
+  # Fast C++ preprocessing
+  Z1_raw <- do.call(rbind, Z)
+  psd <- jfm_build_pseudo_cpp(t.start, I, Z1_raw, Y, td, td.id, tr, tr.id,
+                                beta0, lambda0_d_init, theta_param)
 
-  diff_tr1       <- diff(c(0, tr[order(tr)]))
-  lambda0_r_init <- diff_tr1 * 1
-  B <- jfm_r2i_integral(t.start, I, Z, beta0, tr, lambda0_r_init, tr.id)
-  index_recurrent_matrix <- B$index_recurrent_matrix
-  tr_id                  <- B$tr_id
+  Z_pseudo       <- psd$Z_pseudo
+  td_sorted      <- psd$td_sorted
+  tr_sorted      <- psd$tr_sorted
+  td_id          <- as.integer(psd$td_id)
+  tr_id          <- as.integer(psd$tr_id)
+  de_epi         <- psd$de_epi
+  re_epi         <- psd$re_epi
+  entry_subject  <- psd$entry_subject
+  exit_times     <- psd$exit_times
+  is_last        <- psd$is_last
+  entry_times    <- psd$entry_times
 
-  # Pre-extract shared objects used in the hot CV loop
-  Z_pseudo  <- pseudo_entries[, 3:ncol(pseudo_entries), drop = FALSE]
-  td_sorted <- sort(td)
-  tr_sorted <- sort(tr)
   # cv_fold: 0-based fold assignment indexed by subject ID (test_inx[subj, 1])
   cv_fold   <- as.integer(test_inx[, 1]) - 1L   # 0-based
 
-  # --- Precompute timelines and event indices (one-time cost) ---
-  exit_times <- jfm_compute_exit_times(pseudo_entries, Y)
-  is_last    <- as.integer(jfm_compute_is_last(pseudo_entries))
-  entry_times <- pseudo_entries[, 1]
+  # --- Precompute timelines (one-time cost) ---
   tl_death <- jfm_precompute_timeline(entry_times, exit_times, is_last,
                                        td_sorted, 0L)
   tl_recur <- jfm_precompute_timeline(entry_times, exit_times, is_last,
                                        tr_sorted, 1L)
-  de_epi <- jfm_event_pseudo_idx(index_death_matrix, td_id)
-  re_epi <- jfm_event_pseudo_idx(index_recurrent_matrix, tr_id)
-  subject_of_entry <- as.integer(pseudo_entries[, 2]) - 1L  # 0-based
+  subject_of_entry <- entry_subject
 
   n_de <- length(td)
   n_re <- length(tr)

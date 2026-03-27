@@ -209,32 +209,26 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
   alpha <- initial_alpha
   beta <- initial_beta
 
-  # Initialize baseline hazards
+  # Initialize baseline hazards and build pseudo-data via fast C++
   lambda0_d <- rep(0.2, length(td))
   theta <- 1
-  A <- jfm_wt_death(theta, beta, t.start, I, Z, td, lambda0_d, td.id)
-  td_id    <- A$td_id
-  index_death_matrix    <- A$index_death_matrix
-  pseudo_entries        <- A$pseudo_entries
+  Z1_raw <- do.call(rbind, Z)
+  psd <- jfm_build_pseudo_cpp(t.start, I, Z1_raw, Y, td, td.id, tr, tr.id,
+                                beta, lambda0_d, theta)
 
-  # Pre-extract covariate block and sorted event times (used every iteration)
-  Z_pseudo  <- pseudo_entries[, 3:ncol(pseudo_entries), drop = FALSE]
-  td_sorted <- sort(td)
-  tr_sorted <- sort(tr)
+  Z_pseudo  <- psd$Z_pseudo
+  td_sorted <- psd$td_sorted
+  tr_sorted <- psd$tr_sorted
+  td_id     <- as.integer(psd$td_id)
+  tr_id     <- as.integer(psd$tr_id)
+  de_epi    <- psd$de_epi
+  re_epi    <- psd$re_epi
+  entry_subject <- psd$entry_subject
 
-  diff_tr1 <- diff(c(0, tr[order(tr)]))
-  lambda0_r <- diff_tr1 * 1
-  B <- jfm_r2i_integral(t.start, I, Z, alpha, tr, lambda0_r, tr.id)
-  index_recurrent_matrix <- B$index_recurrent_matrix
-  tr_id  <- B$tr_id
-
-  # --- Precompute timelines and event indices (one-time cost) ---
-  exit_times <- jfm_compute_exit_times(pseudo_entries, Y)
-  is_last    <- as.integer(jfm_compute_is_last(pseudo_entries))
-  entry_times <- pseudo_entries[, 1]
-  de_epi <- jfm_event_pseudo_idx(index_death_matrix, td_id)
-  re_epi <- jfm_event_pseudo_idx(index_recurrent_matrix, tr_id)
-  entry_subject <- as.integer(pseudo_entries[, 2]) - 1L  # 0-based for C++
+  # Precompute timelines (one-time cost)
+  exit_times  <- psd$exit_times
+  is_last     <- psd$is_last
+  entry_times <- psd$entry_times
 
   n_de <- length(td)
   n_re <- length(tr)
@@ -253,7 +247,6 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
   }
 
   # Helper: compute S0t/S1t + baseline hazards with current alpha, beta
-  Z1_raw <- do.call(rbind, Z)
   .compute_ee <- function(alpha, beta) {
     if (estimate_frailty) {
       # Iterate weights to convergence
