@@ -249,24 +249,20 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
   # Helper: compute S0t/S1t + baseline hazards with current alpha, beta
   .compute_ee <- function(alpha, beta) {
     if (estimate_frailty) {
-      # Iterate weights to convergence
-      pp_wt <- jfm_build_pseudo_cpp(t.start, I, Z1_raw, Y,
-        td, td.id, tr, tr.id, beta, lambda0_d, theta)
-      wt_de <- pp_wt$wt_de
-      for (wt_it in 1:30) {
+      # Update weights using current lambda0_d (warm start from previous step).
+      # Two iterations suffice since coefficients change by only eps per step.
+      for (wt_it in 1:2) {
+        pp_wt <- jfm_build_pseudo_cpp(t.start, I, Z1_raw, Y,
+          td, td.id, tr, tr.id, beta, lambda0_d, theta)
+        wt_de <- pp_wt$wt_de
         r_de <- jfm_s0s1_wt_fast_cpp(tl_death$type, tl_death$idx, tl_death$size,
                                         Z_pseudo, entry_subject, beta, wt_de, n_de, n)
-        ld <- jfm_lambda0d_solution(td, d_td, n, r_de$S0t)
-        pp2 <- jfm_build_pseudo_cpp(t.start, I, Z1_raw, Y,
-          td, td.id, tr, tr.id, beta, ld, theta)
-        wt_new <- pp2$wt_de
-        if (max(abs(wt_new - wt_de)) < 1e-12) break
-        wt_de <- wt_new
+        lambda0_d <<- jfm_lambda0d_solution(td, d_td, n, r_de$S0t)
       }
-      r_de <- jfm_s0s1_wt_fast_cpp(tl_death$type, tl_death$idx, tl_death$size,
-                                      Z_pseudo, entry_subject, beta, wt_de, n_de, n)
+      r_de$score <- jfm_score_fast_cpp(de_epi, Z_pseudo, r_de$S1t, r_de$S0t) / n
       r_re <- jfm_s0s1_wt_fast_cpp(tl_recur$type, tl_recur$idx, tl_recur$size,
                                       Z_pseudo, entry_subject, alpha, wt_de, n_re, n)
+      r_re$score <- jfm_score_fast_cpp(re_epi, Z_pseudo, r_re$S1t, r_re$S0t) / n
     } else {
       r_de <- jfm_s0s1_score_fused_cpp(tl_death$type, tl_death$idx, tl_death$size,
                                           Z_pseudo, beta, de_epi, n_de, n)
