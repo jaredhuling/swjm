@@ -135,34 +135,36 @@ extract_data_components <- function(Data2) {
   uids <- unique(Data2$id)
   n <- length(uids)
 
-  # Covariate matrices per subject
-  Z <- vector("list", n)
-  for (i in seq_len(n)) {
-    uid <- uids[i]
-    Z[[i]] <- do.call(cbind, lapply(seq_len(p), function(j) {
-      Data2[[paste0("x", j)]][Data2$id == uid]
-    }))
-  }
+  # Covariate matrices per subject — vectorized via split()
+  cov_cols <- as.matrix(Data2[, 6:ncol(Data2), drop = FALSE])
+  row_groups <- split(seq_len(nrow(Data2)), Data2$id)
+  Z <- lapply(row_groups[as.character(uids)], function(rows) cov_cols[rows, , drop = FALSE])
 
   # Death events
-  td <- Data2$t.stop[Data2$status == 1]
-  td.id <- Data2$id[Data2$status == 1]
+  is_death <- Data2$status == 1
+  td <- Data2$t.stop[is_death]
+  td.id <- Data2$id[is_death]
   d_td <- table(td)
 
   # Recurrent events
-  tr <- Data2$t.stop[Data2$event == 1]
-  tr.id <- Data2$id[Data2$event == 1]
+  is_recur <- Data2$event == 1
+  tr <- Data2$t.stop[is_recur]
+  tr.id <- Data2$id[is_recur]
   d_tr <- table(tr)
 
   # Composite censoring/death times and status (one per subject, event==0 rows)
-  Y <- Data2$t.stop[Data2$event == 0]
-  STATUS <- Data2$status[Data2$event == 0]
+  is_last <- Data2$event == 0
+  Y <- Data2$t.stop[is_last]
+  STATUS <- Data2$status[is_last]
 
-  # Recurrent events per subject
-  Data_recur <- Data2[Data2$event == 1, ]
+  # Recurrent events per subject — vectorized via split()
+  recur_stops <- Data2$t.stop[is_recur]
+  recur_ids   <- Data2$id[is_recur]
+  list_recur_raw <- split(recur_stops, recur_ids)
   list_recur <- vector("list", n)
   for (i in seq_len(n)) {
-    list_recur[[i]] <- Data_recur$t.stop[Data_recur$id == uids[i]]
+    uid_char <- as.character(uids[i])
+    list_recur[[i]] <- if (uid_char %in% names(list_recur_raw)) list_recur_raw[[uid_char]] else numeric(0)
   }
   num_recur <- vapply(list_recur, length, integer(1))
 
