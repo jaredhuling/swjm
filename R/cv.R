@@ -241,6 +241,28 @@ summary.swjm_cv <- function(object, ...) {
 
 
 # --------------------------------------------------------------------------
+# Parallel fold dispatch helper
+# --------------------------------------------------------------------------
+
+# Runs fold training in parallel (mclapply on Unix, parLapply on Windows)
+# or sequentially if ncores == 1.
+.run_folds <- function(fold_ids, train_fn, ncores) {
+  K <- length(fold_ids)
+  if (ncores > 1L && K > 1L) {
+    nc <- min(ncores, K)
+    cl <- parallel::makeCluster(nc)
+    on.exit(parallel::stopCluster(cl), add = TRUE)
+    parallel::clusterEvalQ(cl, library(swjm))
+    parallel::clusterExport(cl, ls(environment(train_fn)),
+                             envir = environment(train_fn))
+    parallel::parLapply(cl, fold_ids, train_fn)
+  } else {
+    lapply(fold_ids, train_fn)
+  }
+}
+
+
+# --------------------------------------------------------------------------
 # JFM cross-validation
 # --------------------------------------------------------------------------
 
@@ -289,14 +311,7 @@ cv_jfm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
   }
 
   # Run fold training (parallel if ncores > 1)
-  if (ncores > 1L && K > 1L) {
-    cl <- parallel::makeCluster(min(ncores, K))
-    on.exit(parallel::stopCluster(cl), add = TRUE)
-    parallel::clusterEvalQ(cl, library(swjm))
-    theta_lambda_list <- parallel::parLapply(cl, seq_len(K), .train_fold)
-  } else {
-    theta_lambda_list <- lapply(seq_len(K), .train_fold)
-  }
+  theta_lambda_list <- .run_folds(seq_len(K), .train_fold, ncores)
 
   # Cross-fitted EE evaluation on full data
   dc <- extract_data_components(Data2)
@@ -437,14 +452,7 @@ cv_jscm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
     )
   }
 
-  if (ncores > 1L && K > 1L) {
-    cl <- parallel::makeCluster(min(ncores, K))
-    on.exit(parallel::stopCluster(cl), add = TRUE)
-    parallel::clusterEvalQ(cl, library(swjm))
-    theta_lambda_list <- parallel::parLapply(cl, seq_len(K), .train_fold_jscm)
-  } else {
-    theta_lambda_list <- lapply(seq_len(K), .train_fold_jscm)
-  }
+  theta_lambda_list <- .run_folds(seq_len(K), .train_fold_jscm, ncores)
 
   count_re <- 0L
   count_cen <- 0L
