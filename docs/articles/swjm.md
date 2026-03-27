@@ -200,16 +200,16 @@ Data_jfm <- dat_jfm$data
 
 # Preview
 head(Data_jfm[, 1:8])
-#>   id   t.start     t.stop event status         x1         x2         x3
-#> 1  1 0.0000000 2.58167636     0      0  0.8005543  1.1902066 -1.6895557
-#> 2  2 0.0000000 3.45105948     1      0  0.4007715  0.1106827 -0.5558411
-#> 3  2 3.4510595 6.39295500     1      0 -0.7288912 -0.6250393 -1.6866933
-#> 4  2 6.3929550 6.46848377     0      0  0.8215811  0.6886403  0.5539177
-#> 5  3 0.0000000 0.04630240     1      0  0.4036315 -0.8864367 -1.3189376
-#> 6  3 0.0463024 0.09965756     1      0  1.6858872 -0.2416898 -0.4682005
+#>   id   t.start    t.stop event status         x1          x2         x3
+#> 1  1 0.0000000 0.1847740     1      0 -0.3756029 -0.56187636 -0.3439172
+#> 2  1 0.1847740 2.5816764     0      0 -0.4898705  0.04715443  1.3001987
+#> 3  2 0.0000000 0.2965848     1      0  0.6843094 -1.39527435  0.8496430
+#> 4  2 0.2965848 1.6792116     1      0 -0.2656516  0.11814451  0.1340386
+#> 5  2 1.6792116 1.7574405     1      0  2.0024827  0.06670087  1.8668518
+#> 6  2 1.7574405 1.8132809     1      0  0.3311792 -2.01421050  0.2119804
 ```
 
-JFM: 500 subjects, 1493 rows, 993 readmissions, 114 deaths
+JFM: 500 subjects, 1513 rows, 1013 readmissions, 104 deaths
 
 The returned list also contains the true generating coefficients:
 
@@ -279,10 +279,10 @@ fit_jfm
 #> 
 #>   Covariates (p):            10
 #>   Iterations:                5000
-#>   Lambda range:              [9.625e-05, 1.351]
-#>   Active at final step:      10 readmission, 7 death
+#>   Lambda range:              [0.03718, 1.442]
+#>   Active at final step:      10 readmission, 10 death
 #>     Readmission (alpha): 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
-#>     Death (beta):        1, 3, 4, 6, 8, 9, 10
+#>     Death (beta):        1, 2, 3, 4, 5, 6, 7, 8, 9, 10
 ```
 
 The returned `swjm_path` object contains:
@@ -307,15 +307,15 @@ active_final <- which(fit_jfm$alpha[, k] != 0 |
 ```
 
 - Path length: 5001 steps
-- Lambda range: \[9.625e-05, 1.351\]
+- Lambda range: \[0.03718, 1.442\]
 - Active variables at final step: 1 2 3 4 5 6 7 8 9 10
 
 Readmission (alpha) coefficients at the final step:
 
 ``` r
 round(fit_jfm$alpha[, k], 4)
-#>  [1]  1.1859 -1.0916  0.1692 -0.0424 -0.0320  0.0486  0.0025  0.0112  0.9638
-#> [10] -0.9999
+#>  [1]  1.1067 -1.0985  0.1204 -0.0418  0.0015  0.0004  0.0043  0.0037  0.9557
+#> [10] -0.9866
 ```
 
 [`summary()`](https://rdrr.io/r/base/summary.html) shows a compact table
@@ -326,23 +326,23 @@ readmission-only, or death-only):
 summary(fit_jfm)
 #> Stagewise path (jfm/coop)
 #> 
-#>   p = 10  |  5000 iterations  |  lambda: [9.625e-05, 1.351]
-#>   Decreasing path: 1692 steps
+#>   p = 10  |  5000 iterations  |  lambda: [0.03718, 1.442]
+#>   Decreasing path: 634 steps
 #> 
 #>   Path-end coefficients (nonzero variables):
 #> 
 #>   Variable    alpha       beta        Type
 #>   ----------  ----------  ----------  ----------------
-#>   x10         -0.9999     -0.8813     shared (+)
-#>   x3          +0.1692     +0.9598     shared (+)
-#>   x9          +0.9638     +0.9073     shared (+)
-#>   x1          +1.1859     +0.0090     shared (+)
-#>   x2          -1.0916          —    readmission only
-#>   x4          -0.0424     -0.8693     shared (+)
-#>   x6          +0.0486     -0.0386     shared (–)
-#>   x5          -0.0320          —    readmission only
-#>   x8          +0.0112     -0.0028     shared (–)
-#>   x7          +0.0025          —    readmission only
+#>   x10         -0.9866     -0.9070     shared (+)
+#>   x3          +0.1204     +1.1683     shared (+)
+#>   x9          +0.9557     +0.9247     shared (+)
+#>   x1          +1.1067     +0.2678     shared (+)
+#>   x2          -1.0985     -0.0318     shared (+)
+#>   x4          -0.0418     -1.1720     shared (+)
+#>   x8          +0.0037     +0.0819     shared (+)
+#>   x5          +0.0015     +0.0129     shared (+)
+#>   x7          +0.0043     +0.0125     shared (+)
+#>   x6          +0.0004     -0.0091     shared (–)
 ```
 
 ### 5.3 Plot the Coefficient Path
@@ -382,7 +382,7 @@ dec_idx     <- swjm:::extract_decreasing_indices(lambda_path)
 lambda_seq  <- lambda_path[dec_idx]
 ```
 
-Full path: 5001 steps; decreasing path: 1692 steps
+Full path: 5001 steps; decreasing path: 634 steps
 
 ``` r
 set.seed(1)
