@@ -412,13 +412,43 @@ stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
   alpha <- initial_alpha
   beta <- initial_beta
 
+  # --- Precompute data structures once (avoid recomputing each iteration) ---
+  xi <- as.matrix(Data2[Data2$event == 0, 6:ncol(Data2)])
+  rownames(xi) <- seq_len(nrow(xi))
+  ti <- Data2$t.stop[Data2$event == 1]
+  yi <- Data2$t.stop[Data2$event == 0]
+  di <- Data2$status[Data2$event == 0]
+
+  uids <- unique(Data2$id)
+  Data_recur <- Data2[Data2$event == 1, ]
+  xi_recur <- as.matrix(Data_recur[, 6:ncol(Data2)])
+  m <- as.integer(vapply(uids, function(id) sum(Data_recur$id == id), integer(1)))
+  w1 <- rep(1, length(yi))
+
+  .jscm_g1 <- function(a) {
+    out <- am1(a, ti, yi, w1, xi, m)
+    (-1) * (if (is.matrix(out)) drop(out) else as.numeric(out))
+  }
+
+  .jscm_g2 <- function(a, b) {
+    texa <- log(ti) + xi_recur %*% a
+    yexa <- log(yi) + xi %*% a
+    rate <- c(reRate(texa, rep(yexa, m), rep(w1, m), yexa))
+    Lam <- exp(-rate)
+    numAdj <- 1e-3
+    if (numAdj > min(Lam)) numAdj <- numAdj * min(Lam)
+    R2 <- (m + numAdj) / (Lam + numAdj)
+    out <- temLog(b, b, xi, yi, R2, di, w1)
+    (-1) * (if (is.matrix(out)) drop(out) else as.numeric(out))
+  }
+
   k <- 0L
   thetaK <- c(initial_alpha, initial_beta)
   normK <- 0
 
   # Initial gradients
-  g1 <- (-1) * jscm_ee_alpha(Data2, alpha)
-  g2 <- (-1) * jscm_ee_beta(Data2, alpha, beta)
+  g1 <- .jscm_g1(alpha)
+  g2 <- .jscm_g2(alpha, beta)
 
   # Gradient scaling: scale death (g2) UP
   if (penalty %in% c("coop", "group")) {
@@ -470,9 +500,9 @@ stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
     normK <- coop_norm(thetaK, p)
     normK_update[k + 1] <- normK
 
-    # Recompute gradients
-    g1 <- (-1) * jscm_ee_alpha(Data2, alpha)
-    g2 <- (-1) * jscm_ee_beta(Data2, alpha, beta)
+    # Recompute gradients (using precomputed data structures)
+    g1 <- .jscm_g1(alpha)
+    g2 <- .jscm_g2(alpha, beta)
 
     # Gradient scaling
     if (penalty %in% c("coop", "group")) {
