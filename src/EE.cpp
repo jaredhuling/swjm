@@ -916,7 +916,6 @@ Rcpp::List jfm_s0s1_wt_fast_cpp(
 //
 // Returns p-vector: U = sum_k [z_{event_pseudo_idx[k]} - S1t[:,k]/S0t[k]]
 //
-// [[Rcpp::export(rng = false)]]
 // Batched cross-fitted CV score norms: evaluates score norms at ALL lambda
 // points in one C++ call.  Avoids the R loop overhead that dominates CV time.
 //
@@ -945,7 +944,6 @@ arma::vec jfm_cv_scores_batch_cpp(
 ) {
   arma::uword p       = Z_pseudo.n_cols;
   arma::uword nrows   = Z_pseudo.n_rows;
-  arma::uword npseudo = nrows;
   arma::uword n_lam   = coef_path.n_cols;
   arma::uword K       = 0;
   for (int i = 0; i < (int)n; i++)

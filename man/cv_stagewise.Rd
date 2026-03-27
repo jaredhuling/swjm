@@ -13,7 +13,8 @@ cv_stagewise(
   eps = NULL,
   max_iter = NULL,
   pp = NULL,
-  estimate_frailty = FALSE
+  estimate_frailty = FALSE,
+  ncores = 1L
 )
 }
 \arguments{
@@ -39,6 +40,10 @@ from a full-data stagewise fit.}
 \item{estimate_frailty}{Logical. For JFM only: if \code{TRUE}, estimates
 the frailty variance and uses frailty weights in the estimating equations
 (passed to \code{stagewise_fit}).}
+
+\item{ncores}{Integer. Number of cores for parallel fold training
+(default 1, sequential). Uses \code{parallel::parLapply} with a
+PSOCK cluster, which works on all platforms including Windows.}
 }
 \value{
 An object of class \code{"swjm_cv"}, a list with components:

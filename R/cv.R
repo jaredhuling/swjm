@@ -22,6 +22,9 @@
 #' @param estimate_frailty Logical. For JFM only: if \code{TRUE}, estimates
 #'   the frailty variance and uses frailty weights in the estimating equations
 #'   (passed to \code{stagewise_fit}).
+#' @param ncores Integer. Number of cores for parallel fold training
+#'   (default 1, sequential). Uses \code{parallel::parLapply} with a
+#'   PSOCK cluster, which works on all platforms including Windows.
 #'
 #' @return An object of class \code{"swjm_cv"}, a list with components:
 #'   \describe{
@@ -55,7 +58,8 @@ cv_stagewise <- function(data, model = c("jfm", "jscm"),
                          penalty = c("coop", "lasso", "group"),
                          K = 5L, lambda_seq = NULL,
                          eps = NULL, max_iter = NULL, pp = NULL,
-                         estimate_frailty = FALSE) {
+                         estimate_frailty = FALSE,
+                         ncores = 1L) {
   model <- match.arg(model)
   penalty <- match.arg(penalty)
 
@@ -90,11 +94,13 @@ cv_stagewise <- function(data, model = c("jfm", "jscm"),
     result <- cv_jfm(data, penalty, lambda_seq, K, initial_alpha,
                      initial_beta, eps1 = 1e-6, adap = 1L, eps2 = eps,
                      iter = max_iter, pp = pp,
-                     estimate_frailty = estimate_frailty)
+                     estimate_frailty = estimate_frailty,
+                     ncores = ncores)
   } else {
     result <- cv_jscm(data, penalty, lambda_seq, K, initial_alpha,
                       initial_beta, eps1 = 1e-6, adap = 1L, eps2 = eps,
-                      iter = max_iter, pp = pp)
+                      iter = max_iter, pp = pp,
+                      ncores = ncores)
   }
 
   # --- Derived quantities from the full-data path ---
@@ -241,48 +247,55 @@ summary.swjm_cv <- function(object, ...) {
 #' @keywords internal
 cv_jfm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
                    initial_beta, eps1, adap, eps2, iter, pp,
-                   estimate_frailty = FALSE) {
+                   estimate_frailty = FALSE, ncores = 1L) {
   p <- ncol(Data2) - 5L
   n1 <- length(unique(Data2$id))
 
   # Stratified CV folds
   folds <- .stratified_folds(Data2, K)
 
-  # Store fold-wise solution paths and fold indices for cross-fitting
+  # Build test index mapping
   test_inx <- matrix(NA_integer_, nrow = n1, ncol = 2)
-  theta_lambda_list <- vector("list", K)
-
   for (kk in seq_len(K)) {
     leave_out <- folds[[kk]]$test_ids
     test_inx[leave_out, 1] <- kk
     test_inx[leave_out, 2] <- leave_out
+  }
 
+  # Per-fold training function
+  .train_fold <- function(kk) {
+    leave_out <- folds[[kk]]$test_ids
     Data2_tr <- Data2[!(Data2$id %in% leave_out), ]
     rownames(Data2_tr) <- seq_len(nrow(Data2_tr))
     Data2_tr$id <- match(Data2_tr$id, unique(Data2_tr$id))
 
-    # Train on fold
     results_tr <- stagewise_jfm(initial_alpha, initial_beta, Data2_tr,
                                 penalty, eps1, adap, eps2, iter, pp,
                                 estimate_frailty = estimate_frailty)
 
     lambda_seq_tr <- results_tr$lambda
     theta_tr <- results_tr$theta_update
-
-    # Extract decreasing lambda path
     dec_idx <- extract_decreasing_indices(lambda_seq_tr)
     lambda_seq_tr_ordered <- lambda_seq_tr[dec_idx]
     theta_tr_ordered <- theta_tr[, dec_idx, drop = FALSE]
 
-    # Interpolate to evaluation lambda_seq
     lamlist <- lambda_interp(lambda_seq_tr_ordered, lambda_seq)
-    theta_lambda <- as.matrix(
+    as.matrix(
       theta_tr_ordered[, lamlist$left, drop = FALSE] %*%
         Matrix::Diagonal(x = lamlist$frac) +
         theta_tr_ordered[, lamlist$right, drop = FALSE] %*%
         Matrix::Diagonal(x = 1 - lamlist$frac)
     )
-    theta_lambda_list[[kk]] <- theta_lambda
+  }
+
+  # Run fold training (parallel if ncores > 1)
+  if (ncores > 1L && K > 1L) {
+    cl <- parallel::makeCluster(min(ncores, K))
+    on.exit(parallel::stopCluster(cl), add = TRUE)
+    parallel::clusterEvalQ(cl, library(swjm))
+    theta_lambda_list <- parallel::parLapply(cl, seq_len(K), .train_fold)
+  } else {
+    theta_lambda_list <- lapply(seq_len(K), .train_fold)
   }
 
   # Cross-fitted EE evaluation on full data
@@ -381,7 +394,8 @@ cv_jfm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
 
 #' @keywords internal
 cv_jscm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
-                    initial_beta, eps1, adap, eps2, iter, pp) {
+                    initial_beta, eps1, adap, eps2, iter, pp,
+                    ncores = 1L) {
   p <- ncol(Data2) - 5L
   n1 <- length(unique(Data2$id))
 
@@ -400,6 +414,38 @@ cv_jscm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
   yexa_mat <- matrix(NA, nrow = n1, ncol = length(lambda_seq))
   yexb_mat <- matrix(NA, nrow = n1, ncol = length(lambda_seq))
 
+  # Train all folds (parallel if ncores > 1)
+  .train_fold_jscm <- function(kk) {
+    leave_out <- folds[[kk]]$test_ids
+    Data2_tr <- Data2[!(Data2$id %in% leave_out), ]
+    rownames(Data2_tr) <- seq_len(nrow(Data2_tr))
+    Data2_tr$id <- match(Data2_tr$id, unique(Data2_tr$id))
+
+    results_tr <- stagewise_jscm(initial_alpha, initial_beta, Data2_tr,
+                                 penalty, eps1, adap, eps2, iter, pp)
+    lambda_seq_tr <- results_tr$lambda
+    theta_tr <- results_tr$theta_update
+    dec_idx <- extract_decreasing_indices(lambda_seq_tr)
+    lambda_seq_tr_ordered <- lambda_seq_tr[dec_idx]
+    theta_tr_ordered <- theta_tr[, dec_idx, drop = FALSE]
+    lamlist <- lambda_interp(lambda_seq_tr_ordered, lambda_seq)
+    as.matrix(
+      theta_tr_ordered[, lamlist$left, drop = FALSE] %*%
+        Matrix::Diagonal(x = lamlist$frac) +
+        theta_tr_ordered[, lamlist$right, drop = FALSE] %*%
+        Matrix::Diagonal(x = 1 - lamlist$frac)
+    )
+  }
+
+  if (ncores > 1L && K > 1L) {
+    cl <- parallel::makeCluster(min(ncores, K))
+    on.exit(parallel::stopCluster(cl), add = TRUE)
+    parallel::clusterEvalQ(cl, library(swjm))
+    theta_lambda_list <- parallel::parLapply(cl, seq_len(K), .train_fold_jscm)
+  } else {
+    theta_lambda_list <- lapply(seq_len(K), .train_fold_jscm)
+  }
+
   count_re <- 0L
   count_cen <- 0L
 
@@ -414,25 +460,8 @@ cv_jscm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
     rownames(Data2_val) <- seq_len(nrow(Data2_val))
     Data2_val$id <- match(Data2_val$id, unique(Data2_val$id))
 
-    # Train
-    results_tr <- stagewise_jscm(initial_alpha, initial_beta, Data2_tr,
-                                 penalty, eps1, adap, eps2, iter, pp)
-    lambda_seq_tr <- results_tr$lambda
-    theta_tr <- results_tr$theta_update
-
-    # Extract decreasing path
-    dec_idx <- extract_decreasing_indices(lambda_seq_tr)
-    lambda_seq_tr_ordered <- lambda_seq_tr[dec_idx]
-    theta_tr_ordered <- theta_tr[, dec_idx, drop = FALSE]
-
-    # Interpolate
-    lamlist <- lambda_interp(lambda_seq_tr_ordered, lambda_seq)
-    theta_lambda <- as.matrix(
-      theta_tr_ordered[, lamlist$left, drop = FALSE] %*%
-        Matrix::Diagonal(x = lamlist$frac) +
-        theta_tr_ordered[, lamlist$right, drop = FALSE] %*%
-        Matrix::Diagonal(x = 1 - lamlist$frac)
-    )
+    # Train and interpolate (may have been done in parallel below)
+    theta_lambda <- theta_lambda_list[[kk]]
 
     # Collect test set info
     count_re_pre <- count_re
