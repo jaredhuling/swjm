@@ -337,38 +337,32 @@ cv_jfm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
                                      res_de0$S0t) / n
   c1 <- max(abs(g10)) / max(abs(g20))
 
-  # Cross-fitted score norms
-  Scorenorm_crossfit_re  <- numeric(length(lambda_seq))
-  Scorenorm_crossfit_cen <- numeric(length(lambda_seq))
-  Scorenorm_crossfit     <- numeric(length(lambda_seq))
-
-  for (j in seq_along(lambda_seq)) {
-    alpha_mat <- matrix(NA, nrow = K, ncol = p)
-    beta_mat  <- matrix(NA, nrow = K, ncol = p)
+  # Build flattened coefficient arrays for batched C++ evaluation
+  # coef_array: (K*p) × n_lambda — rows [0..p-1] = fold 0, [p..2p-1] = fold 1, etc.
+  n_lam <- length(lambda_seq)
+  alpha_array <- matrix(NA_real_, K * p, n_lam)
+  beta_array  <- matrix(NA_real_, K * p, n_lam)
+  for (j in seq_len(n_lam)) {
     for (qq in seq_len(K)) {
-      alpha_mat[qq, ] <- theta_lambda_list[[qq]][1:p, j]
-      beta_mat[qq, ]  <- theta_lambda_list[[qq]][(p + 1):(2 * p), j]
+      rows <- ((qq - 1L) * p + 1L):(qq * p)
+      alpha_array[rows, j] <- theta_lambda_list[[qq]][1:p, j]
+      beta_array[rows, j]  <- theta_lambda_list[[qq]][(p + 1):(2 * p), j]
     }
-
-    # Fast cross-fitted S0t+S1t via timeline scan
-    res_de_cf <- jfm_s0s1_fast_cf_cpp(tl_death$type, tl_death$idx,
-                                        tl_death$size, Z_pseudo, beta_mat,
-                                        subject_of_entry, cv_fold, n_de, n)
-    res_re_cf <- jfm_s0s1_fast_cf_cpp(tl_recur$type, tl_recur$idx,
-                                        tl_recur$size, Z_pseudo, alpha_mat,
-                                        subject_of_entry, cv_fold, n_re, n)
-
-    g1 <- (-1) * jfm_score_fast_cpp(re_epi, Z_pseudo, res_re_cf$S1t,
-                                      res_re_cf$S0t) / n
-    g2 <- (-1) * jfm_score_fast_cpp(de_epi, Z_pseudo, res_de_cf$S1t,
-                                      res_de_cf$S0t) / n
-    g2_origin <- g2
-    g2 <- g2 * c1
-
-    Scorenorm_crossfit_re[j]  <- sqrt(sum(g1^2))
-    Scorenorm_crossfit_cen[j] <- sqrt(sum(g2_origin^2))
-    Scorenorm_crossfit[j]     <- sqrt(sum(c(g1, g2)^2))
   }
+
+  # Batched cross-fitted score norms (one C++ call per sub-model)
+  Scorenorm_crossfit_re <- jfm_cv_scores_batch_cf_cpp(
+    tl_recur$type, tl_recur$idx, tl_recur$size,
+    Z_pseudo, alpha_array, K, subject_of_entry, cv_fold,
+    re_epi, n_re, n)
+
+  Scorenorm_crossfit_cen <- jfm_cv_scores_batch_cf_cpp(
+    tl_death$type, tl_death$idx, tl_death$size,
+    Z_pseudo, beta_array, K, subject_of_entry, cv_fold,
+    de_epi, n_de, n)
+
+  # Combined norm with scaling
+  Scorenorm_crossfit <- sqrt(Scorenorm_crossfit_re^2 + (c1 * Scorenorm_crossfit_cen)^2)
 
   list(
     position_CF_re = which.min(Scorenorm_crossfit_re),

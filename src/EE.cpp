@@ -917,6 +917,184 @@ Rcpp::List jfm_s0s1_wt_fast_cpp(
 // Returns p-vector: U = sum_k [z_{event_pseudo_idx[k]} - S1t[:,k]/S0t[k]]
 //
 // [[Rcpp::export(rng = false)]]
+// Batched cross-fitted CV score norms: evaluates score norms at ALL lambda
+// points in one C++ call.  Avoids the R loop overhead that dominates CV time.
+//
+// tl_type, tl_idx, tl_size: precomputed timeline
+// Z_pseudo: n_pseudo × p
+// coef_path: p × n_lambda coefficient matrix (columns = lambda points)
+// subject_of_entry: n_pseudo int, 0-based subject per entry
+// cv_fold: n int, 0-based fold per subject
+// event_pseudo_idx: ne int, 0-based entry per event
+// ne, n: event count and subject count
+//
+// Returns: n_lambda-vector of score L2 norms
+//
+// [[Rcpp::export(rng = false)]]
+arma::vec jfm_cv_scores_batch_cpp(
+    const Rcpp::IntegerVector& tl_type,
+    const Rcpp::IntegerVector& tl_idx,
+    int tl_size,
+    const arma::mat& Z_pseudo,
+    const arma::mat& coef_path,
+    const Rcpp::IntegerVector& subject_of_entry,
+    const Rcpp::IntegerVector& cv_fold,
+    const Rcpp::IntegerVector& event_pseudo_idx,
+    int ne,
+    int n
+) {
+  arma::uword p       = Z_pseudo.n_cols;
+  arma::uword nrows   = Z_pseudo.n_rows;
+  arma::uword npseudo = nrows;
+  arma::uword n_lam   = coef_path.n_cols;
+  arma::uword K       = 0;
+  for (int i = 0; i < (int)n; i++)
+    if ((arma::uword)cv_fold[i] >= K) K = cv_fold[i] + 1;
+
+  double inv_n = 1.0 / (double)n;
+  arma::vec score_norms(n_lam);
+
+  // For each lambda point
+  for (arma::uword lam = 0; lam < n_lam; lam++) {
+    arma::vec coef = coef_path.col(lam);
+
+    // Build K fold-specific coef vectors (each fold uses a different coef)
+    // In cross-fitting, fold k's subjects use the coef trained WITHOUT fold k.
+    // coef_path already contains the cross-fitted coef for this lambda.
+    // Actually, coef_path.col(lam) is a SINGLE coef vector, but for CF
+    // we need K different coefs.  The caller should pass a K×p matrix per lambda.
+    // For simplicity, this function handles the common case where all folds
+    // use the same coef (non-CF), and we provide a separate batch CF function.
+
+    // Precompute exp(z' coef) for all pseudo-entries
+    arma::vec exp_lp = arma::exp(Z_pseudo * coef);
+
+    // Timeline scan
+    double run_s0 = 0.0;
+    arma::vec run_s1(p, arma::fill::zeros);
+    arma::vec S0t(ne); arma::mat S1t(p, ne);
+
+    for (int i = 0; i < tl_size; i++) {
+      int type = tl_type[i];
+      int idx  = tl_idx[i];
+      if (type == 1) {
+        double e = exp_lp(idx);
+        run_s0 += e;
+        const double* zk = Z_pseudo.memptr() + idx;
+        for (arma::uword l = 0; l < p; l++) run_s1(l) += e * zk[l * nrows];
+      } else if (type == 0 || type == 3) {
+        double e = exp_lp(idx);
+        run_s0 -= e;
+        const double* zk = Z_pseudo.memptr() + idx;
+        for (arma::uword l = 0; l < p; l++) run_s1(l) -= e * zk[l * nrows];
+      } else {
+        S0t(idx)     = run_s0 * inv_n;
+        S1t.col(idx) = run_s1 * inv_n;
+      }
+    }
+
+    // Compute score
+    arma::vec U(p, arma::fill::zeros);
+    for (arma::uword i = 0; i < (arma::uword)ne; i++) {
+      arma::uword k = (arma::uword)event_pseudo_idx[i];
+      double inv_s0 = 1.0 / S0t(i);
+      const double* zk = Z_pseudo.memptr() + k;
+      const double* s1 = S1t.colptr(i);
+      for (arma::uword l = 0; l < p; l++)
+        U(l) += zk[l * nrows] - s1[l] * inv_s0;
+    }
+    U *= inv_n;
+    score_norms(lam) = std::sqrt(arma::dot(U, U));
+  }
+
+  return score_norms;
+}
+
+
+// Batched cross-fitted version: coef_array is K × p × n_lambda (flattened as
+// K*p × n_lambda matrix, where rows 0..p-1 = fold 0, rows p..2p-1 = fold 1, etc.)
+//
+// [[Rcpp::export(rng = false)]]
+arma::vec jfm_cv_scores_batch_cf_cpp(
+    const Rcpp::IntegerVector& tl_type,
+    const Rcpp::IntegerVector& tl_idx,
+    int tl_size,
+    const arma::mat& Z_pseudo,
+    const arma::mat& coef_array,
+    int K_folds,
+    const Rcpp::IntegerVector& subject_of_entry,
+    const Rcpp::IntegerVector& cv_fold,
+    const Rcpp::IntegerVector& event_pseudo_idx,
+    int ne,
+    int n
+) {
+  arma::uword p       = Z_pseudo.n_cols;
+  arma::uword nrows   = Z_pseudo.n_rows;
+  arma::uword npseudo = nrows;
+  arma::uword n_lam   = coef_array.n_cols;
+  arma::uword K       = (arma::uword)K_folds;
+
+  double inv_n = 1.0 / (double)n;
+  arma::vec score_norms(n_lam);
+
+  for (arma::uword lam = 0; lam < n_lam; lam++) {
+    // Extract K fold-specific coefs from flattened array
+    // coef_array rows: [fold0_coef(p), fold1_coef(p), ..., foldK-1_coef(p)]
+    arma::mat coef_by_fold(K, p);
+    for (arma::uword f = 0; f < K; f++)
+      coef_by_fold.row(f) = coef_array.col(lam).subvec(f * p, (f + 1) * p - 1).t();
+
+    // Precompute exp(z_j' coef_{fold(subject(j))})
+    arma::vec exp_lp(npseudo);
+    for (arma::uword j = 0; j < npseudo; j++) {
+      int fold = cv_fold[subject_of_entry[j]];
+      exp_lp(j) = std::exp(arma::dot(Z_pseudo.row(j), coef_by_fold.row(fold)));
+    }
+
+    // Timeline scan
+    double run_s0 = 0.0;
+    arma::vec run_s1(p, arma::fill::zeros);
+    arma::vec S0t(ne); arma::mat S1t(p, ne);
+
+    for (int i = 0; i < tl_size; i++) {
+      int type = tl_type[i];
+      int idx  = tl_idx[i];
+      if (type == 1) {
+        double e = exp_lp(idx);
+        run_s0 += e;
+        const double* zk = Z_pseudo.memptr() + idx;
+        for (arma::uword l = 0; l < p; l++) run_s1(l) += e * zk[l * nrows];
+      } else if (type == 0 || type == 3) {
+        double e = exp_lp(idx);
+        run_s0 -= e;
+        const double* zk = Z_pseudo.memptr() + idx;
+        for (arma::uword l = 0; l < p; l++) run_s1(l) -= e * zk[l * nrows];
+      } else {
+        S0t(idx)     = run_s0 * inv_n;
+        S1t.col(idx) = run_s1 * inv_n;
+      }
+    }
+
+    // Score
+    arma::vec U(p, arma::fill::zeros);
+    for (arma::uword i = 0; i < (arma::uword)ne; i++) {
+      arma::uword k = (arma::uword)event_pseudo_idx[i];
+      double inv_s0 = 1.0 / S0t(i);
+      const double* zk = Z_pseudo.memptr() + k;
+      const double* s1 = S1t.colptr(i);
+      for (arma::uword l = 0; l < p; l++)
+        U(l) += zk[l * nrows] - s1[l] * inv_s0;
+    }
+    U *= inv_n;
+    score_norms(lam) = std::sqrt(arma::dot(U, U));
+  }
+
+  return score_norms;
+}
+
+
+// Simplified score using precomputed event pseudo-entry indices.
+// [[Rcpp::export(rng = false)]]
 arma::vec jfm_score_fast_cpp(
     const Rcpp::IntegerVector& event_pseudo_idx,
     const arma::mat& Z_pseudo,

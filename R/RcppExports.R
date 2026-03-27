@@ -53,6 +53,14 @@ jfm_s0s1_wt_fast_cpp <- function(tl_type, tl_idx, tl_size, Z_pseudo, entry_subje
     .Call(`_swjm_jfm_s0s1_wt_fast_cpp`, tl_type, tl_idx, tl_size, Z_pseudo, entry_subject, coef, wt_subj, ne, n)
 }
 
+jfm_cv_scores_batch_cpp <- function(tl_type, tl_idx, tl_size, Z_pseudo, coef_path, subject_of_entry, cv_fold, event_pseudo_idx, ne, n) {
+    .Call(`_swjm_jfm_cv_scores_batch_cpp`, tl_type, tl_idx, tl_size, Z_pseudo, coef_path, subject_of_entry, cv_fold, event_pseudo_idx, ne, n)
+}
+
+jfm_cv_scores_batch_cf_cpp <- function(tl_type, tl_idx, tl_size, Z_pseudo, coef_array, K_folds, subject_of_entry, cv_fold, event_pseudo_idx, ne, n) {
+    .Call(`_swjm_jfm_cv_scores_batch_cf_cpp`, tl_type, tl_idx, tl_size, Z_pseudo, coef_array, K_folds, subject_of_entry, cv_fold, event_pseudo_idx, ne, n)
+}
+
 jfm_score_fast_cpp <- function(event_pseudo_idx, Z_pseudo, S1t, S0t) {
     .Call(`_swjm_jfm_score_fast_cpp`, event_pseudo_idx, Z_pseudo, S1t, S0t)
 }

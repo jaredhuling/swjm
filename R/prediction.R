@@ -334,33 +334,18 @@ markers_cause_specific_true <- function(t, alpha, beta, lambda0_r, lambda0_d,
 #' @keywords internal
 lambda0_r_gen <- function(Data2, alpha) {
   dc <- extract_data_components(Data2)
-  Z <- dc$Z; n <- dc$n; tr <- dc$tr; tr.id <- dc$tr.id; d_tr <- dc$d_tr
-  td <- dc$td; td.id <- dc$td.id; Y <- dc$Y
-  t.start <- dc$t.start; I <- dc$I
-  p <- dc$p
+  n <- dc$n; d_tr <- dc$d_tr; p <- dc$p
+  Z1 <- do.call(rbind, dc$Z)
 
-  lambda0_d_init <- rep(0.2, length(td))
-  theta <- 1
-  beta0 <- numeric(p)
+  psd <- jfm_build_pseudo_cpp(dc$t.start, dc$I, Z1, dc$Y,
+                                dc$td, dc$td.id, dc$tr, dc$tr.id,
+                                numeric(p), rep(0.2, length(dc$td)), 1.0)
 
-  A <- jfm_wt_death(theta, beta0, t.start, I, Z, td, lambda0_d_init, td.id)
-  pseudo_entries <- A$pseudo_entries
-  Z_pseudo <- pseudo_entries[, 3:ncol(pseudo_entries), drop = FALSE]
-
-  diff_tr1 <- diff(c(0, tr[order(tr)]))
-  lambda0_r_init <- diff_tr1 * 1
-  B <- jfm_r2i_integral(t.start, I, Z, alpha, tr, lambda0_r_init, tr.id)
-
-  exit_times  <- jfm_compute_exit_times(pseudo_entries, Y)
-  is_last     <- as.integer(jfm_compute_is_last(pseudo_entries))
-  entry_times <- pseudo_entries[, 1]
-  tr_sorted   <- sort(tr)
-  tl_recur <- jfm_precompute_timeline(entry_times, exit_times, is_last,
-                                       tr_sorted, 1L)
-
+  tl_recur <- jfm_precompute_timeline(psd$entry_times, psd$exit_times,
+                                       psd$is_last, psd$tr_sorted, 1L)
   res_re <- jfm_s0s1_fast_cpp(tl_recur$type, tl_recur$idx, tl_recur$size,
-                                Z_pseudo, alpha, length(tr), n)
-  jfm_lambda0r_solution(tr, d_tr, n, res_re$S0t)
+                                psd$Z_pseudo, alpha, psd$n_R, n)
+  jfm_lambda0r_solution(dc$tr, d_tr, n, res_re$S0t)
 }
 
 
@@ -379,43 +364,25 @@ lambda0_r_gen <- function(Data2, alpha) {
 #' @keywords internal
 lambda0_gen <- function(Data2, alpha, beta) {
   dc <- extract_data_components(Data2)
-  Z <- dc$Z; n <- dc$n; td <- dc$td; td.id <- dc$td.id; d_td <- dc$d_td
-  tr <- dc$tr; tr.id <- dc$tr.id; d_tr <- dc$d_tr
-  Y <- dc$Y; t.start <- dc$t.start; I <- dc$I
-  p <- dc$p
+  n <- dc$n; d_td <- dc$d_td; d_tr <- dc$d_tr; p <- dc$p
+  Z1 <- do.call(rbind, dc$Z)
 
-  lambda0_d_init <- rep(0.2, length(td))
-  theta <- 1
-  beta0 <- numeric(p)
+  psd <- jfm_build_pseudo_cpp(dc$t.start, dc$I, Z1, dc$Y,
+                                dc$td, dc$td.id, dc$tr, dc$tr.id,
+                                beta, rep(0.2, length(dc$td)), 1.0)
 
-  A <- jfm_wt_death(theta, beta0, t.start, I, Z, td,
-                     lambda0_d_init, td.id)
-  pseudo_entries <- A$pseudo_entries
-  Z_pseudo <- pseudo_entries[, 3:ncol(pseudo_entries), drop = FALSE]
+  tl_death <- jfm_precompute_timeline(psd$entry_times, psd$exit_times,
+                                       psd$is_last, psd$td_sorted, 0L)
+  tl_recur <- jfm_precompute_timeline(psd$entry_times, psd$exit_times,
+                                       psd$is_last, psd$tr_sorted, 1L)
 
-  diff_tr1 <- diff(c(0, tr[order(tr)]))
-  lambda0_r_init <- diff_tr1 * 1
-  B <- jfm_r2i_integral(t.start, I, Z, alpha, tr, lambda0_r_init, tr.id)
-
-  exit_times  <- jfm_compute_exit_times(pseudo_entries, Y)
-  is_last     <- as.integer(jfm_compute_is_last(pseudo_entries))
-  entry_times <- pseudo_entries[, 1]
-  td_sorted   <- sort(td)
-  tr_sorted   <- sort(tr)
-
-  tl_death <- jfm_precompute_timeline(entry_times, exit_times, is_last,
-                                       td_sorted, 0L)
-  tl_recur <- jfm_precompute_timeline(entry_times, exit_times, is_last,
-                                       tr_sorted, 1L)
-
-  # alpha = recurrence, beta = death
   res_de <- jfm_s0s1_fast_cpp(tl_death$type, tl_death$idx, tl_death$size,
-                                Z_pseudo, beta, length(td), n)
-  lambda0_d <- jfm_lambda0d_solution(td, d_td, n, res_de$S0t)
+                                psd$Z_pseudo, beta, psd$n_D, n)
+  lambda0_d <- jfm_lambda0d_solution(dc$td, d_td, n, res_de$S0t)
 
   res_re <- jfm_s0s1_fast_cpp(tl_recur$type, tl_recur$idx, tl_recur$size,
-                                Z_pseudo, alpha, length(tr), n)
-  lambda0_r <- jfm_lambda0r_solution(tr, d_tr, n, res_re$S0t)
+                                psd$Z_pseudo, alpha, psd$n_R, n)
+  lambda0_r <- jfm_lambda0r_solution(dc$tr, d_tr, n, res_re$S0t)
 
   list(lambda0_r = lambda0_r, lambda0_d = lambda0_d)
 }
