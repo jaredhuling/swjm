@@ -12,7 +12,8 @@
 #' @param model Character. Either \code{"jfm"} for the joint frailty model
 #'   or \code{"jscm"} for the joint scale-change model.
 #' @param ... Additional arguments passed to the model-specific function.
-#'   For JFM: \code{b}, \code{lambda0_d}, \code{lambda0_r}.
+#'   For JFM: \code{b}, \code{lambda0_d}, \code{lambda0_r}, \code{gamma_frailty},
+#'   \code{cov_type}.
 #'   For JSCM: \code{b}.
 #'
 #' @return A list with components:
@@ -72,6 +73,15 @@ generate_data <- function(n, p, scenario = 1, model = c("jfm", "jscm"), ...) {
 #'   (default 0.041).
 #' @param lambda0_r Numeric. Baseline hazard rate for recurrent events
 #'   (default 1).
+#' @param gamma_frailty Numeric. Frailty variance parameter. When positive,
+#'   a subject-specific frailty \eqn{Z_i \sim \text{Gamma}(1/\gamma, 1/\gamma)}
+#'   is drawn for each subject and multiplies both hazard rates. When 0
+#'   (default), no frailty is used (\eqn{Z_i = 1}).
+#' @param cov_type Character. How time-varying covariates are generated:
+#'   \code{"internal"} (default) redraws covariates at each recurrent event;
+#'   \code{"external"} changes covariates at predetermined Poisson times
+#'   independent of the event process (Kalbfleisch-compatible);
+#'   \code{"fixed"} draws one covariate vector per subject that never changes.
 #'
 #' @return A list with components:
 #'   \describe{
@@ -90,7 +100,10 @@ generate_data <- function(n, p, scenario = 1, model = c("jfm", "jscm"), ...) {
 #'
 #' @export
 generate_data_jfm <- function(n, p, scenario = 1, b = 6.50,
-                               lambda0_d = 0.041, lambda0_r = 1) {
+                               lambda0_d = 0.041, lambda0_r = 1,
+                               gamma_frailty = 0,
+                               cov_type = c("internal", "external", "fixed")) {
+  cov_type <- match.arg(cov_type)
   S <- scenario
   theta <- 1
   alpha.star <- numeric(p)
@@ -167,63 +180,146 @@ generate_data_jfm <- function(n, p, scenario = 1, b = 6.50,
   alpha <- alpha.star
   beta  <- beta.star
 
-  id         <- c()
-  t.start    <- c()
-  t.stop     <- c()
-  event      <- c()
-  status     <- c()
-  cov.matrix <- c()
+  # Pre-allocate list of per-subject results (avoids quadratic vector growing)
+  subj_list <- vector("list", n)
+
+  censors <- runif(n, 1, b)
+  frailties <- if (gamma_frailty > 0) {
+    rgamma(n, shape = 1 / gamma_frailty, rate = 1 / gamma_frailty)
+  } else {
+    rep(1, n)
+  }
 
   for (j in 1:n) {
-    censor <- runif(1, 1, b)
-    lam_d  <- lambda0_d
-    lam_r  <- lambda0_r
-    gamma  <- 1
-    Xk     <- 0
-    delta  <- 0
+    censor <- censors[j]
+    Z_i    <- frailties[j]
 
-    X.vec      <- c()
-    sub.event  <- c()
-    sub.status <- c()
-    cov.vec    <- c()
-    sub.id     <- c()
+    # Generate covariate schedule based on cov_type
+    if (cov_type == "fixed") {
+      # Single covariate drawn once per subject
+      z_fixed <- rnorm(p)
+      cov_break_times <- c(0, censor)
+      cov_values <- list(z_fixed)
+    } else if (cov_type == "external") {
+      # Covariates change at predetermined Poisson times (independent of events)
+      n_changes <- rpois(1, lambda = 3)
+      ch_times <- if (n_changes > 0) sort(runif(n_changes, 0, censor)) else numeric(0)
+      cov_break_times <- c(0, ch_times, censor)
+      cov_values <- lapply(seq_len(length(cov_break_times) - 1), function(i) rnorm(p))
+    } else {
+      # "internal": covariates redrawn at each recurrent event (legacy behavior)
+      cov_break_times <- NULL  # not used; z drawn inside the event loop
+      cov_values <- NULL
+    }
 
-    while (Xk < censor & delta == 0) {
-      z       <- rnorm(p)
-      cov.vec <- rbind(cov.vec, z)
+    Xk    <- 0
+    delta <- 0
+    max_events <- 200L
+    X_buf   <- numeric(max_events)
+    ev_buf  <- integer(max_events)
+    st_buf  <- integer(max_events)
+    cov_buf <- matrix(NA_real_, max_events, p)
+    k <- 0L
 
-      T_gap <- rexp(1, rate = gamma * lam_r * exp(drop(beta %*% z)))
-      D_gap <- rexp(1, rate = gamma * lam_d * exp(drop(alpha %*% z)))
+    if (cov_type == "internal") {
+      # Legacy: redraw covariates at each event
+      while (Xk < censor && delta == 0L) {
+        z <- rnorm(p)
+        T_gap <- rexp(1, rate = Z_i * lambda0_r * exp(drop(beta %*% z)))
+        D_gap <- rexp(1, rate = Z_i * lambda0_d * exp(drop(alpha %*% z)))
 
-      Xk    <- Xk + min(T_gap, D_gap)
-      X.vec <- c(X.vec, Xk)
+        Xk <- Xk + min(T_gap, D_gap)
+        if (D_gap < T_gap && Xk < censor) delta <- 1L else delta <- 0L
 
-      if (D_gap < T_gap & Xk < censor) {
-        delta <- 1
-      } else {
-        delta <- 0
+        k <- k + 1L
+        if (k > max_events) {
+          max_events <- max_events * 2L
+          X_buf   <- c(X_buf, numeric(max_events - length(X_buf)))
+          ev_buf  <- c(ev_buf, integer(max_events - length(ev_buf)))
+          st_buf  <- c(st_buf, integer(max_events - length(st_buf)))
+          cov_buf <- rbind(cov_buf, matrix(NA_real_, max_events - nrow(cov_buf), p))
+        }
+        X_buf[k]     <- Xk
+        ev_buf[k]    <- 1L - delta
+        st_buf[k]    <- delta
+        cov_buf[k, ] <- z
       }
+    } else {
+      # "fixed" or "external": process covariate intervals
+      n_intv <- length(cov_break_times) - 1L
+      for (ci in seq_len(n_intv)) {
+        z <- cov_values[[ci]]
+        intv_end <- cov_break_times[ci + 1L]
+        intv_start <- if (k > 0L) X_buf[k] else 0
 
-      sub.status <- c(sub.status, delta)
-      sub.event  <- c(sub.event, 1 - delta)
-      sub.id     <- c(sub.id, j)
+        while (Xk < intv_end && delta == 0L) {
+          T_gap <- rexp(1, rate = Z_i * lambda0_r * exp(drop(beta %*% z)))
+          D_gap <- rexp(1, rate = Z_i * lambda0_d * exp(drop(alpha %*% z)))
+          gap <- min(T_gap, D_gap)
+
+          if (Xk + gap >= intv_end) break  # no event before interval ends
+
+          Xk <- Xk + gap
+          if (Xk >= censor) break
+          if (D_gap < T_gap) delta <- 1L else delta <- 0L
+
+          k <- k + 1L
+          if (k > max_events) {
+            max_events <- max_events * 2L
+            X_buf   <- c(X_buf, numeric(max_events - length(X_buf)))
+            ev_buf  <- c(ev_buf, integer(max_events - length(ev_buf)))
+            st_buf  <- c(st_buf, integer(max_events - length(st_buf)))
+            cov_buf <- rbind(cov_buf, matrix(NA_real_, max_events - nrow(cov_buf), p))
+          }
+          X_buf[k]     <- Xk
+          ev_buf[k]    <- 1L - delta
+          st_buf[k]    <- delta
+          cov_buf[k, ] <- z
+          intv_start <- Xk
+        }
+        if (delta == 1L) break
+        Xk <- intv_end  # advance to next interval
+      }
     }
 
-    if (delta != 1) {
-      X.vec[length(X.vec)]         <- censor
-      sub.event[length(sub.event)] <- 0
+    if (k == 0L) {
+      # No events: single censoring row
+      k <- 1L
+      X_buf[1]     <- censor
+      ev_buf[1]    <- 0L
+      st_buf[1]    <- 0L
+      cov_buf[1, ] <- if (cov_type == "internal") rnorm(p) else cov_values[[1]]
     }
 
-    sub.t.stop  <- X.vec
-    sub.t.start <- c(0, X.vec[-length(X.vec)])
+    X_buf  <- X_buf[1:k]
+    ev_buf <- ev_buf[1:k]
+    st_buf <- st_buf[1:k]
+    cov_buf <- cov_buf[1:k, , drop = FALSE]
 
-    id         <- c(id, sub.id)
-    t.start    <- c(t.start, sub.t.start)
-    t.stop     <- c(t.stop, sub.t.stop)
-    event      <- c(event, sub.event)
-    status     <- c(status, sub.status)
-    cov.matrix <- rbind(cov.matrix, cov.vec)
+    if (delta != 1L) {
+      X_buf[k]  <- censor
+      ev_buf[k] <- 0L
+    }
+
+    sub_t_start <- c(0, X_buf[-k])
+    subj_list[[j]] <- list(
+      id      = rep(j, k),
+      t.start = sub_t_start,
+      t.stop  = X_buf,
+      event   = ev_buf,
+      status  = st_buf,
+      cov     = cov_buf
+    )
   }
+
+  # Collapse all subjects at once
+  subj_list <- subj_list[!vapply(subj_list, is.null, logical(1))]
+  id         <- unlist(lapply(subj_list, `[[`, "id"))
+  t.start    <- unlist(lapply(subj_list, `[[`, "t.start"))
+  t.stop     <- unlist(lapply(subj_list, `[[`, "t.stop"))
+  event      <- unlist(lapply(subj_list, `[[`, "event"))
+  status     <- unlist(lapply(subj_list, `[[`, "status"))
+  cov.matrix <- do.call(rbind, lapply(subj_list, `[[`, "cov"))
 
   colnames(cov.matrix) <- paste0("x", 1:p)
   Data2 <- data.frame(
@@ -234,7 +330,8 @@ generate_data_jfm <- function(n, p, scenario = 1, b = 6.50,
 
   # Relabel to package convention: alpha = recurrence, beta = death
   # (internally alpha.star drove death and beta.star drove recurrence)
-  list(data = Data2, alpha_true = beta.star, beta_true = alpha.star)
+  list(data = Data2, alpha_true = beta.star, beta_true = alpha.star,
+       gamma_frailty = gamma_frailty)
 }
 
 

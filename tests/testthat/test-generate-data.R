@@ -2,7 +2,7 @@ test_that("generate_data_jfm produces correct format", {
   set.seed(1)
   dat <- generate_data_jfm(n = 20, p = 10, scenario = 1)
 
-  expect_named(dat, c("data", "alpha_true", "beta_true"))
+  expect_true(all(c("data", "alpha_true", "beta_true") %in% names(dat)))
   expect_s3_class(dat$data, "data.frame")
 
   expect_true("id" %in% names(dat$data))
@@ -28,7 +28,7 @@ test_that("generate_data_jfm scenarios differ", {
 test_that("generate_data dispatches correctly", {
   set.seed(1)
   d_jfm <- generate_data(n = 10, p = 10, scenario = 1, model = "jfm")
-  expect_named(d_jfm, c("data", "alpha_true", "beta_true"))
+  expect_true(all(c("data", "alpha_true", "beta_true") %in% names(d_jfm)))
 })
 
 test_that("generate_data_jscm produces correct format", {

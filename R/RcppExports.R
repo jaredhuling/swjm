@@ -37,6 +37,10 @@ jfm_precompute_timeline <- function(entry_times, exit_times, is_last, query_time
     .Call(`_swjm_jfm_precompute_timeline`, entry_times, exit_times, is_last, query_times, query_before_enter)
 }
 
+jfm_precompute_timeline_wt <- function(entry_times, exit_times, is_last, query_times, wt_update_times, query_before_enter = 0L) {
+    .Call(`_swjm_jfm_precompute_timeline_wt`, entry_times, exit_times, is_last, query_times, wt_update_times, query_before_enter)
+}
+
 jfm_s0s1_fast_cpp <- function(tl_type, tl_idx, tl_size, Z_pseudo, coef, ne, n) {
     .Call(`_swjm_jfm_s0s1_fast_cpp`, tl_type, tl_idx, tl_size, Z_pseudo, coef, ne, n)
 }
@@ -45,7 +49,15 @@ jfm_s0s1_fast_cf_cpp <- function(tl_type, tl_idx, tl_size, Z_pseudo, coef_mat, s
     .Call(`_swjm_jfm_s0s1_fast_cf_cpp`, tl_type, tl_idx, tl_size, Z_pseudo, coef_mat, subject_of_entry, cv_fold, ne, n)
 }
 
+jfm_s0s1_wt_fast_cpp <- function(tl_type, tl_idx, tl_size, Z_pseudo, entry_subject, coef, wt_subj, ne, n) {
+    .Call(`_swjm_jfm_s0s1_wt_fast_cpp`, tl_type, tl_idx, tl_size, Z_pseudo, entry_subject, coef, wt_subj, ne, n)
+}
+
 jfm_score_fast_cpp <- function(event_pseudo_idx, Z_pseudo, S1t, S0t) {
     .Call(`_swjm_jfm_score_fast_cpp`, event_pseudo_idx, Z_pseudo, S1t, S0t)
+}
+
+jfm_build_pseudo_cpp <- function(t_start, subj_id_raw, Z_raw, Y, td, td_id_raw, tr, tr_id_raw, coef_death, lambda0_d, theta) {
+    .Call(`_swjm_jfm_build_pseudo_cpp`, t_start, subj_id_raw, Z_raw, Y, td, td_id_raw, tr, tr_id_raw, coef_death, lambda0_d, theta)
 }
 

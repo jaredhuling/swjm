@@ -144,6 +144,21 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// jfm_precompute_timeline_wt
+Rcpp::List jfm_precompute_timeline_wt(const arma::vec& entry_times, const arma::vec& exit_times, const arma::ivec& is_last, const arma::vec& query_times, const arma::vec& wt_update_times, int query_before_enter);
+RcppExport SEXP _swjm_jfm_precompute_timeline_wt(SEXP entry_timesSEXP, SEXP exit_timesSEXP, SEXP is_lastSEXP, SEXP query_timesSEXP, SEXP wt_update_timesSEXP, SEXP query_before_enterSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type entry_times(entry_timesSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type exit_times(exit_timesSEXP);
+    Rcpp::traits::input_parameter< const arma::ivec& >::type is_last(is_lastSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type query_times(query_timesSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type wt_update_times(wt_update_timesSEXP);
+    Rcpp::traits::input_parameter< int >::type query_before_enter(query_before_enterSEXP);
+    rcpp_result_gen = Rcpp::wrap(jfm_precompute_timeline_wt(entry_times, exit_times, is_last, query_times, wt_update_times, query_before_enter));
+    return rcpp_result_gen;
+END_RCPP
+}
 // jfm_s0s1_fast_cpp
 Rcpp::List jfm_s0s1_fast_cpp(const Rcpp::IntegerVector& tl_type, const Rcpp::IntegerVector& tl_idx, int tl_size, const arma::mat& Z_pseudo, const arma::vec& coef, int ne, int n);
 RcppExport SEXP _swjm_jfm_s0s1_fast_cpp(SEXP tl_typeSEXP, SEXP tl_idxSEXP, SEXP tl_sizeSEXP, SEXP Z_pseudoSEXP, SEXP coefSEXP, SEXP neSEXP, SEXP nSEXP) {
@@ -178,6 +193,24 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// jfm_s0s1_wt_fast_cpp
+Rcpp::List jfm_s0s1_wt_fast_cpp(const Rcpp::IntegerVector& tl_type, const Rcpp::IntegerVector& tl_idx, int tl_size, const arma::mat& Z_pseudo, const Rcpp::IntegerVector& entry_subject, const arma::vec& coef, const arma::mat& wt_subj, int ne, int n);
+RcppExport SEXP _swjm_jfm_s0s1_wt_fast_cpp(SEXP tl_typeSEXP, SEXP tl_idxSEXP, SEXP tl_sizeSEXP, SEXP Z_pseudoSEXP, SEXP entry_subjectSEXP, SEXP coefSEXP, SEXP wt_subjSEXP, SEXP neSEXP, SEXP nSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type tl_type(tl_typeSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type tl_idx(tl_idxSEXP);
+    Rcpp::traits::input_parameter< int >::type tl_size(tl_sizeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Z_pseudo(Z_pseudoSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type entry_subject(entry_subjectSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type coef(coefSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type wt_subj(wt_subjSEXP);
+    Rcpp::traits::input_parameter< int >::type ne(neSEXP);
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    rcpp_result_gen = Rcpp::wrap(jfm_s0s1_wt_fast_cpp(tl_type, tl_idx, tl_size, Z_pseudo, entry_subject, coef, wt_subj, ne, n));
+    return rcpp_result_gen;
+END_RCPP
+}
 // jfm_score_fast_cpp
 arma::vec jfm_score_fast_cpp(const Rcpp::IntegerVector& event_pseudo_idx, const arma::mat& Z_pseudo, const arma::mat& S1t, const arma::vec& S0t);
 RcppExport SEXP _swjm_jfm_score_fast_cpp(SEXP event_pseudo_idxSEXP, SEXP Z_pseudoSEXP, SEXP S1tSEXP, SEXP S0tSEXP) {
@@ -188,6 +221,26 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type S1t(S1tSEXP);
     Rcpp::traits::input_parameter< const arma::vec& >::type S0t(S0tSEXP);
     rcpp_result_gen = Rcpp::wrap(jfm_score_fast_cpp(event_pseudo_idx, Z_pseudo, S1t, S0t));
+    return rcpp_result_gen;
+END_RCPP
+}
+// jfm_build_pseudo_cpp
+Rcpp::List jfm_build_pseudo_cpp(const arma::vec& t_start, const arma::vec& subj_id_raw, const arma::mat& Z_raw, const arma::vec& Y, const arma::vec& td, const arma::vec& td_id_raw, const arma::vec& tr, const arma::vec& tr_id_raw, const arma::vec& coef_death, const arma::vec& lambda0_d, double theta);
+RcppExport SEXP _swjm_jfm_build_pseudo_cpp(SEXP t_startSEXP, SEXP subj_id_rawSEXP, SEXP Z_rawSEXP, SEXP YSEXP, SEXP tdSEXP, SEXP td_id_rawSEXP, SEXP trSEXP, SEXP tr_id_rawSEXP, SEXP coef_deathSEXP, SEXP lambda0_dSEXP, SEXP thetaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type t_start(t_startSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type subj_id_raw(subj_id_rawSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Z_raw(Z_rawSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type td(tdSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type td_id_raw(td_id_rawSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type tr(trSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type tr_id_raw(tr_id_rawSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type coef_death(coef_deathSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type lambda0_d(lambda0_dSEXP);
+    Rcpp::traits::input_parameter< double >::type theta(thetaSEXP);
+    rcpp_result_gen = Rcpp::wrap(jfm_build_pseudo_cpp(t_start, subj_id_raw, Z_raw, Y, td, td_id_raw, tr, tr_id_raw, coef_death, lambda0_d, theta));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -202,9 +255,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_swjm_jfm_s0s1_cf_cpp", (DL_FUNC) &_swjm_jfm_s0s1_cf_cpp, 7},
     {"_swjm_jfm_score_cpp", (DL_FUNC) &_swjm_jfm_score_cpp, 5},
     {"_swjm_jfm_precompute_timeline", (DL_FUNC) &_swjm_jfm_precompute_timeline, 5},
+    {"_swjm_jfm_precompute_timeline_wt", (DL_FUNC) &_swjm_jfm_precompute_timeline_wt, 6},
     {"_swjm_jfm_s0s1_fast_cpp", (DL_FUNC) &_swjm_jfm_s0s1_fast_cpp, 7},
     {"_swjm_jfm_s0s1_fast_cf_cpp", (DL_FUNC) &_swjm_jfm_s0s1_fast_cf_cpp, 9},
+    {"_swjm_jfm_s0s1_wt_fast_cpp", (DL_FUNC) &_swjm_jfm_s0s1_wt_fast_cpp, 9},
     {"_swjm_jfm_score_fast_cpp", (DL_FUNC) &_swjm_jfm_score_fast_cpp, 4},
+    {"_swjm_jfm_build_pseudo_cpp", (DL_FUNC) &_swjm_jfm_build_pseudo_cpp, 11},
     {NULL, NULL, 0}
 };
 

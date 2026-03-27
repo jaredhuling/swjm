@@ -21,6 +21,10 @@
 #' @param max_iter Integer. Maximum number of stagewise iterations.
 #' @param pp Integer. Early-stopping block size: algorithm checks every
 #'   \code{pp} iterations if fewer than 3 unique coordinates were updated.
+#' @param estimate_frailty Logical. For JFM only: if \code{TRUE}, estimates
+#'   the frailty variance and uses the Kalbfleisch et al. (2013) frailty
+#'   weights \eqn{w_i(t)} in the estimating equations. If \code{FALSE}
+#'   (default), uses unit weights (simplified model without frailty).
 #'
 #' @return An object of class \code{"swjm_path"}, a list with components:
 #'   \describe{
@@ -45,7 +49,8 @@
 #' @export
 stagewise_fit <- function(data, model = c("jfm", "jscm"),
                           penalty = c("coop", "lasso", "group"),
-                          eps = NULL, max_iter = NULL, pp = NULL) {
+                          eps = NULL, max_iter = NULL, pp = NULL,
+                          estimate_frailty = FALSE) {
   model <- match.arg(model)
   penalty <- match.arg(penalty)
 
@@ -59,7 +64,8 @@ stagewise_fit <- function(data, model = c("jfm", "jscm"),
     if (is.null(pp)) pp <- max_iter   # disable early stopping by default for JFM
     result <- stagewise_jfm(initial_alpha, initial_beta, data, penalty,
                             eps1 = 1e-6, adap = 1L, eps2 = eps,
-                            iter = max_iter, pp = pp)
+                            iter = max_iter, pp = pp,
+                            estimate_frailty = estimate_frailty)
   } else {
     if (is.null(eps)) eps <- 0.01
     if (is.null(max_iter)) max_iter <- 5000L
@@ -189,7 +195,8 @@ summary.swjm_path <- function(object, ...) {
 
 #' @keywords internal
 stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
-                          eps1, adap, eps2, iter, pp = 200L) {
+                          eps1, adap, eps2, iter, pp = 200L,
+                          estimate_frailty = FALSE) {
   p <- length(initial_alpha)
   dc <- extract_data_components(Data2)
   Z <- dc$Z; n <- dc$n; td <- dc$td; td.id <- dc$td.id; d_td <- dc$d_td
@@ -225,25 +232,62 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
   exit_times <- jfm_compute_exit_times(pseudo_entries, Y)
   is_last    <- as.integer(jfm_compute_is_last(pseudo_entries))
   entry_times <- pseudo_entries[, 1]
-  tl_death <- jfm_precompute_timeline(entry_times, exit_times, is_last,
-                                       td_sorted, 0L)
-  tl_recur <- jfm_precompute_timeline(entry_times, exit_times, is_last,
-                                       tr_sorted, 1L)
   de_epi <- jfm_event_pseudo_idx(index_death_matrix, td_id)
   re_epi <- jfm_event_pseudo_idx(index_recurrent_matrix, tr_id)
+  entry_subject <- as.integer(pseudo_entries[, 2]) - 1L  # 0-based for C++
 
   n_de <- length(td)
   n_re <- length(tr)
 
-  # Initial S0t/S1t via fast timeline scan
-  res_de <- jfm_s0s1_fast_cpp(tl_death$type, tl_death$idx, tl_death$size,
-                                Z_pseudo, beta, n_de, n)
-  S0t_de <- res_de$S0t
-  lambda0_d <- jfm_lambda0d_solution(td, d_td, n, S0t_de)
+  if (estimate_frailty) {
+    # Weighted timelines (include WEIGHT_UPDATE events at death times)
+    tl_death <- jfm_precompute_timeline_wt(entry_times, exit_times, is_last,
+                                            td_sorted, td_sorted, 0L)
+    tl_recur <- jfm_precompute_timeline_wt(entry_times, exit_times, is_last,
+                                            tr_sorted, td_sorted, 1L)
+  } else {
+    tl_death <- jfm_precompute_timeline(entry_times, exit_times, is_last,
+                                         td_sorted, 0L)
+    tl_recur <- jfm_precompute_timeline(entry_times, exit_times, is_last,
+                                         tr_sorted, 1L)
+  }
 
-  res_re <- jfm_s0s1_fast_cpp(tl_recur$type, tl_recur$idx, tl_recur$size,
-                                Z_pseudo, alpha, n_re, n)
-  S0t_re <- res_re$S0t
+  # Helper: compute S0t/S1t + baseline hazards with current alpha, beta
+  Z1_raw <- do.call(rbind, Z)
+  .compute_ee <- function(alpha, beta) {
+    if (estimate_frailty) {
+      # Iterate weights to convergence
+      pp_wt <- jfm_build_pseudo_cpp(t.start, I, Z1_raw, Y,
+        td, td.id, tr, tr.id, beta, lambda0_d, theta)
+      wt_de <- pp_wt$wt_de
+      for (wt_it in 1:30) {
+        r_de <- jfm_s0s1_wt_fast_cpp(tl_death$type, tl_death$idx, tl_death$size,
+                                        Z_pseudo, entry_subject, beta, wt_de, n_de, n)
+        ld <- jfm_lambda0d_solution(td, d_td, n, r_de$S0t)
+        pp2 <- jfm_build_pseudo_cpp(t.start, I, Z1_raw, Y,
+          td, td.id, tr, tr.id, beta, ld, theta)
+        wt_new <- pp2$wt_de
+        if (max(abs(wt_new - wt_de)) < 1e-12) break
+        wt_de <- wt_new
+      }
+      r_de <- jfm_s0s1_wt_fast_cpp(tl_death$type, tl_death$idx, tl_death$size,
+                                      Z_pseudo, entry_subject, beta, wt_de, n_de, n)
+      r_re <- jfm_s0s1_wt_fast_cpp(tl_recur$type, tl_recur$idx, tl_recur$size,
+                                      Z_pseudo, entry_subject, alpha, wt_de, n_re, n)
+    } else {
+      r_de <- jfm_s0s1_fast_cpp(tl_death$type, tl_death$idx, tl_death$size,
+                                  Z_pseudo, beta, n_de, n)
+      r_re <- jfm_s0s1_fast_cpp(tl_recur$type, tl_recur$idx, tl_recur$size,
+                                  Z_pseudo, alpha, n_re, n)
+    }
+    list(res_de = r_de, res_re = r_re)
+  }
+
+  # Initial S0t/S1t
+  ee <- .compute_ee(alpha, beta)
+  S0t_de <- ee$res_de$S0t
+  lambda0_d <- jfm_lambda0d_solution(td, d_td, n, S0t_de)
+  S0t_re <- ee$res_re$S0t
   lambda0_r <- jfm_lambda0r_solution(tr, d_tr, n, S0t_re)
 
   # Stagewise loop
@@ -252,8 +296,8 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
   normK <- 0
 
   # Compute initial gradients using fast score
-  g1 <- (-1) * jfm_score_fast_cpp(re_epi, Z_pseudo, res_re$S1t, S0t_re) / n
-  g2 <- (-1) * jfm_score_fast_cpp(de_epi, Z_pseudo, res_de$S1t, S0t_de) / n
+  g1 <- (-1) * jfm_score_fast_cpp(re_epi, Z_pseudo, ee$res_re$S1t, S0t_re) / n
+  g2 <- (-1) * jfm_score_fast_cpp(de_epi, Z_pseudo, ee$res_de$S1t, S0t_de) / n
 
   # Gradient scaling: scale death (g2) up by max|g1|/max|g2|
   if (penalty %in% c("coop", "group")) {
@@ -301,15 +345,11 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
     alpha <- thetaK[1:p]         # recurrence
     beta  <- thetaK[(p + 1):(2 * p)]  # death
 
-    # Update baseline hazards + recompute gradients via fast timeline scan
-    res_de <- jfm_s0s1_fast_cpp(tl_death$type, tl_death$idx, tl_death$size,
-                                  Z_pseudo, beta, n_de, n)
-    S0t_de    <- res_de$S0t
+    # Update baseline hazards + recompute gradients
+    ee <- .compute_ee(alpha, beta)
+    S0t_de    <- ee$res_de$S0t
     lambda0_d <- jfm_lambda0d_solution(td, d_td, n, S0t_de)
-
-    res_re <- jfm_s0s1_fast_cpp(tl_recur$type, tl_recur$idx, tl_recur$size,
-                                  Z_pseudo, alpha, n_re, n)
-    S0t_re    <- res_re$S0t
+    S0t_re    <- ee$res_re$S0t
     lambda0_r <- jfm_lambda0r_solution(tr, d_tr, n, S0t_re)
 
     # Compute norm
@@ -317,8 +357,8 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
     normK_update[k + 1] <- normK
 
     # Scores via fast score
-    g1 <- (-1) * jfm_score_fast_cpp(re_epi, Z_pseudo, res_re$S1t, S0t_re) / n
-    g2 <- (-1) * jfm_score_fast_cpp(de_epi, Z_pseudo, res_de$S1t, S0t_de) / n
+    g1 <- (-1) * jfm_score_fast_cpp(re_epi, Z_pseudo, ee$res_re$S1t, S0t_re) / n
+    g2 <- (-1) * jfm_score_fast_cpp(de_epi, Z_pseudo, ee$res_de$S1t, S0t_de) / n
 
     # Gradient scaling: scale death (g2) up
     if (penalty %in% c("coop", "group")) {
