@@ -12,7 +12,9 @@ generate_data_jfm(
   scenario = 1,
   b = 6.5,
   lambda0_d = 0.041,
-  lambda0_r = 1
+  lambda0_r = 1,
+  gamma_frailty = 0,
+  cov_type = c("internal", "external", "fixed")
 )
 ```
 
@@ -42,6 +44,21 @@ generate_data_jfm(
 - lambda0_r:
 
   Numeric. Baseline hazard rate for recurrent events (default 1).
+
+- gamma_frailty:
+
+  Numeric. Frailty variance parameter. When positive, a subject-specific
+  frailty \\Z_i \sim \text{Gamma}(1/\gamma, 1/\gamma)\\ is drawn for
+  each subject and multiplies both hazard rates. When 0 (default), no
+  frailty is used (\\Z_i = 1\\).
+
+- cov_type:
+
+  Character. How time-varying covariates are generated: `"internal"`
+  (default) redraws covariates at each recurrent event; `"external"`
+  changes covariates at predetermined Poisson times independent of the
+  event process (Kalbfleisch-compatible); `"fixed"` draws one covariate
+  vector per subject that never changes.
 
 ## Value
 

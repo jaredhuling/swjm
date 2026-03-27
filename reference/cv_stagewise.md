@@ -14,7 +14,8 @@ cv_stagewise(
   lambda_seq = NULL,
   eps = NULL,
   max_iter = NULL,
-  pp = NULL
+  pp = NULL,
+  estimate_frailty = FALSE
 )
 ```
 
@@ -53,6 +54,12 @@ cv_stagewise(
 - pp:
 
   Integer. Early-stop block size (passed to `stagewise_fit`).
+
+- estimate_frailty:
+
+  Logical. For JFM only: if `TRUE`, estimates the frailty variance and
+  uses frailty weights in the estimating equations (passed to
+  `stagewise_fit`).
 
 ## Value
 

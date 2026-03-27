@@ -49,7 +49,8 @@ using K-fold cross-validation with cross-fitted estimating equations.</p>
 <span>  lambda_seq <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  eps <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  max_iter <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  pp <span class="op">=</span> <span class="cn">NULL</span></span>
+<span>  pp <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  estimate_frailty <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -90,6 +91,12 @@ from a full-data stagewise fit.</p></dd>
 
 <dt id="arg-pp">pp<a class="anchor" aria-label="anchor" href="#arg-pp"></a></dt>
 <dd><p>Integer. Early-stop block size (passed to <code>stagewise_fit</code>).</p></dd>
+
+
+<dt id="arg-estimate-frailty">estimate_frailty<a class="anchor" aria-label="anchor" href="#arg-estimate-frailty"></a></dt>
+<dd><p>Logical. For JFM only: if <code>TRUE</code>, estimates
+the frailty variance and uses frailty weights in the estimating equations
+(passed to <code>stagewise_fit</code>).</p></dd>
 
 </dl></div>
     <div class="section level2">
