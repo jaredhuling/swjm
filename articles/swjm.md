@@ -633,7 +633,7 @@ fit_jscm
 #> 
 #>   Covariates (p):            10
 #>   Iterations:                5000
-#>   Lambda range:              [0.001035, 2.501]
+#>   Lambda range:              [0.8113, 2.501]
 #>   Active at final step:      10 readmission, 10 death
 #>     Readmission (alpha): 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
 #>     Death (beta):        1, 2, 3, 4, 5, 6, 7, 8, 9, 10
@@ -658,18 +658,18 @@ cv_jscm
 #> Cross-validation (jscm/coop)
 #> 
 #>   Covariates (p):              10
-#>   Lambda grid size:            418
-#>   Best position (combined):    194  (lambda = 0.7508)
-#>   Selected variables:          10 readmission, 10 death
-#>     Readmission (alpha): 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
-#>     Death (beta):        1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+#>   Lambda grid size:            188
+#>   Best position (combined):    174  (lambda = 0.8498)
+#>   Selected variables:          8 readmission, 7 death
+#>     Readmission (alpha): 1, 2, 3, 4, 5, 7, 9, 10
+#>     Death (beta):        1, 2, 3, 4, 5, 7, 10
 ```
 
 ### 7.3 Results
 
-Selected alpha (readmission): 1 2 3 4 5 6 7 8 9 10
+Selected alpha (readmission): 1 2 3 4 5 7 9 10
 
-Selected beta (death): 1 2 3 4 5 6 7 8 9 10
+Selected beta (death): 1 2 3 4 5 7 10
 
 True nonzero alpha: 1 2 3 4 9 10
 
@@ -685,22 +685,22 @@ plot(cv_jscm)
 summary(cv_jscm)
 #> CV-selected model (jscm/coop)
 #> 
-#>   p = 10  |  Lambda grid: 418 steps  |  CV optimal: step 194 (lambda = 0.7508)
+#>   p = 10  |  Lambda grid: 188 steps  |  CV optimal: step 174 (lambda = 0.8498)
 #> 
-#>   Selected coefficients  (10 readmission, 10 death):
+#>   Selected coefficients  (8 readmission, 7 death):
 #> 
 #>   Variable    alpha       beta        Type
 #>   ----------  ----------  ----------  ----------------
-#>   x10         -0.9829     -1.7923     shared (+)
-#>   x3          +0.3671     +1.9102     shared (+)
-#>   x1          +1.0464     -0.2118     shared (–)
-#>   x9          +0.8238     +0.4196     shared (+)
-#>   x4          -0.0157     -1.1296     shared (+)
-#>   x2          -0.5338     +0.3683     shared (–)
-#>   x5          -0.0688     -0.3737     shared (+)
-#>   x7          -0.0587     -0.2738     shared (+)
-#>   x6          +0.0050     +0.0397     shared (+)
-#>   x8          -0.0030     -0.0399     shared (+)
+#>   x10         -0.9389     -1.5563     shared (+)
+#>   x3          +0.3404     +1.6516     shared (+)
+#>   x1          +0.4700     -0.7000     shared (–)
+#>   x4          -0.0157     -0.9596     shared (+)
+#>   x2          -0.0400     +0.6600     shared (–)
+#>   x9          +0.3100          —    readmission only
+#>   x5          -0.0382     -0.1963     shared (+)
+#>   x7          -0.0224     -0.1077     shared (+)
+#> 
+#>   Inactive (2): x6, x8
 ```
 
 ### 7.4 Baseline Hazard (JSCM)
@@ -716,11 +716,11 @@ pooling, so the resulting ${\widehat{\Lambda}}_{0}^{r}$ is on the common
 bh_jscm <- baseline_hazard(cv_jscm, times = c(0.5, 1.0, 2.0, 3.0, 4.0))
 print(bh_jscm)
 #>   time cumhaz_readmission cumhaz_death
-#> 1  0.5          0.7965519   0.08342343
-#> 2  1.0          1.3313540   0.13081173
-#> 3  2.0          2.1580888   0.22304215
-#> 4  3.0          2.7663789   0.23367385
-#> 5  4.0          3.2676957   0.31265077
+#> 1  0.5          0.8399251   0.08222471
+#> 2  1.0          1.4718006   0.14964766
+#> 3  2.0          2.2538291   0.22198664
+#> 4  3.0          2.7957716   0.26537195
+#> 5  4.0          3.3866842   0.30498577
 ```
 
 ### 7.5 Survival Prediction and AFT Interpretation
@@ -752,15 +752,15 @@ pred_jscm
 #> 
 #>   Subjects:                3
 #>   Time points:             1043
-#>   Time range:              [0.0005165, 50.89]
+#>   Time range:              [0.0007044, 42.73]
 #> 
 #>   Time-acceleration factors (exp(alpha^T z) for recurrence):
 #> Patient_1 Patient_2 Patient_3 
-#>    8.1082    0.3165    0.4106 
+#>    1.9440    0.4237    0.7643 
 #> 
 #>   Time-acceleration factors (exp(beta^T z) for death):
 #> Patient_1 Patient_2 Patient_3 
-#>    0.3379    2.0422    1.2160 
+#>    0.1519    2.0670    2.1216 
 #> 
 #>   Use plot() to visualize survival curves and predictor contributions.
 ```
@@ -770,7 +770,7 @@ Recurrence time-acceleration factors (total per subject):
 ``` r
 round(pred_jscm$time_accel_re, 3)
 #> Patient_1 Patient_2 Patient_3 
-#>     8.108     0.317     0.411
+#>     1.944     0.424     0.764
 ```
 
 [`plot()`](https://rdrr.io/r/graphics/plot.default.html) produces the
@@ -965,19 +965,17 @@ colnames(coef_jscm) <- c("variable", "alpha_true", "alpha_est",
                           "beta_true", "beta_est")
 print(coef_jscm, row.names = FALSE)
 #>  variable alpha_true alpha_est beta_true beta_est
-#>        x1        1.1     1.046       0.1   -0.212
-#>        x2       -1.1    -0.534      -0.1    0.368
-#>        x3        0.1     0.367       1.1    1.910
-#>        x4       -0.1    -0.016      -1.1   -1.130
-#>        x5        0.0    -0.069       0.0   -0.374
-#>        x6        0.0     0.005       0.0    0.040
-#>        x7        0.0    -0.059       0.0   -0.274
-#>        x8        0.0    -0.003       0.0   -0.040
-#>        x9        1.0     0.824       1.0    0.420
-#>       x10       -1.0    -0.983      -1.0   -1.792
+#>        x1        1.1     0.470       0.1   -0.700
+#>        x2       -1.1    -0.040      -0.1    0.660
+#>        x3        0.1     0.340       1.1    1.652
+#>        x4       -0.1    -0.016      -1.1   -0.960
+#>        x5        0.0    -0.038       0.0   -0.196
+#>        x7        0.0    -0.022       0.0   -0.108
+#>        x9        1.0     0.310       1.0    0.000
+#>       x10       -1.0    -0.939      -1.0   -1.556
 ```
 
-JSCM alpha: TP=6 FP=4 FN=0 \| beta: TP=6 FP=4 FN=0
+JSCM alpha: TP=6 FP=2 FN=0 \| beta: TP=5 FP=2 FN=1
 
 ### 10.2 Time-Varying AUC
 
