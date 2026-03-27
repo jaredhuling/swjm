@@ -211,6 +211,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// jfm_s0s1_score_fused_cpp
+Rcpp::List jfm_s0s1_score_fused_cpp(const Rcpp::IntegerVector& tl_type, const Rcpp::IntegerVector& tl_idx, int tl_size, const arma::mat& Z_pseudo, const arma::vec& coef, const Rcpp::IntegerVector& event_pseudo_idx, int ne, int n);
+RcppExport SEXP _swjm_jfm_s0s1_score_fused_cpp(SEXP tl_typeSEXP, SEXP tl_idxSEXP, SEXP tl_sizeSEXP, SEXP Z_pseudoSEXP, SEXP coefSEXP, SEXP event_pseudo_idxSEXP, SEXP neSEXP, SEXP nSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type tl_type(tl_typeSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type tl_idx(tl_idxSEXP);
+    Rcpp::traits::input_parameter< int >::type tl_size(tl_sizeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Z_pseudo(Z_pseudoSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type coef(coefSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type event_pseudo_idx(event_pseudo_idxSEXP);
+    Rcpp::traits::input_parameter< int >::type ne(neSEXP);
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    rcpp_result_gen = Rcpp::wrap(jfm_s0s1_score_fused_cpp(tl_type, tl_idx, tl_size, Z_pseudo, coef, event_pseudo_idx, ne, n));
+    return rcpp_result_gen;
+END_RCPP
+}
 // jfm_cv_scores_batch_cpp
 arma::vec jfm_cv_scores_batch_cpp(const Rcpp::IntegerVector& tl_type, const Rcpp::IntegerVector& tl_idx, int tl_size, const arma::mat& Z_pseudo, const arma::mat& coef_path, const Rcpp::IntegerVector& subject_of_entry, const Rcpp::IntegerVector& cv_fold, const Rcpp::IntegerVector& event_pseudo_idx, int ne, int n);
 RcppExport SEXP _swjm_jfm_cv_scores_batch_cpp(SEXP tl_typeSEXP, SEXP tl_idxSEXP, SEXP tl_sizeSEXP, SEXP Z_pseudoSEXP, SEXP coef_pathSEXP, SEXP subject_of_entrySEXP, SEXP cv_foldSEXP, SEXP event_pseudo_idxSEXP, SEXP neSEXP, SEXP nSEXP) {
@@ -298,6 +315,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_swjm_jfm_s0s1_fast_cpp", (DL_FUNC) &_swjm_jfm_s0s1_fast_cpp, 7},
     {"_swjm_jfm_s0s1_fast_cf_cpp", (DL_FUNC) &_swjm_jfm_s0s1_fast_cf_cpp, 9},
     {"_swjm_jfm_s0s1_wt_fast_cpp", (DL_FUNC) &_swjm_jfm_s0s1_wt_fast_cpp, 9},
+    {"_swjm_jfm_s0s1_score_fused_cpp", (DL_FUNC) &_swjm_jfm_s0s1_score_fused_cpp, 8},
     {"_swjm_jfm_cv_scores_batch_cpp", (DL_FUNC) &_swjm_jfm_cv_scores_batch_cpp, 10},
     {"_swjm_jfm_cv_scores_batch_cf_cpp", (DL_FUNC) &_swjm_jfm_cv_scores_batch_cf_cpp, 11},
     {"_swjm_jfm_score_fast_cpp", (DL_FUNC) &_swjm_jfm_score_fast_cpp, 4},

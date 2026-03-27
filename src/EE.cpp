@@ -916,6 +916,70 @@ Rcpp::List jfm_s0s1_wt_fast_cpp(
 //
 // Returns p-vector: U = sum_k [z_{event_pseudo_idx[k]} - S1t[:,k]/S0t[k]]
 //
+// Fused S0t + score: single-pass computation that avoids storing the p × ne
+// S1t matrix.  Returns both S0t (for baseline hazard updates) and the score
+// vector.  This is the hot-path function called at every stagewise iteration.
+//
+// event_pseudo_idx: ne int, 0-based pseudo-entry per event
+// Returns list(S0t = ne-vec, score = p-vec) where score = sum_k [z_k - S1t_k/S0t_k].
+//
+// [[Rcpp::export(rng = false)]]
+Rcpp::List jfm_s0s1_score_fused_cpp(
+    const Rcpp::IntegerVector& tl_type,
+    const Rcpp::IntegerVector& tl_idx,
+    int tl_size,
+    const arma::mat& Z_pseudo,
+    const arma::vec& coef,
+    const Rcpp::IntegerVector& event_pseudo_idx,
+    int ne,
+    int n
+) {
+  arma::uword p = coef.n_elem;
+
+  arma::vec exp_lp = arma::exp(Z_pseudo * coef);
+
+  // Pre-transpose Z_pseudo for row-contiguous access: Z_t is p × n_pseudo
+  arma::mat Z_t = Z_pseudo.t();
+
+  double run_s0 = 0.0;
+  arma::vec run_s1(p, arma::fill::zeros);
+
+  arma::vec S0t(ne, arma::fill::zeros);
+  arma::vec U(p, arma::fill::zeros);
+
+  for (int i = 0; i < tl_size; i++) {
+    int type = tl_type[i];
+    int idx  = tl_idx[i];
+
+    if (type == 1) {
+      double e = exp_lp(idx);
+      run_s0 += e;
+      // Z_t.col(idx) is contiguous p-vector = Z_pseudo row idx
+      run_s1 += e * Z_t.unsafe_col(idx);
+
+    } else if (type == 0 || type == 3) {
+      double e = exp_lp(idx);
+      run_s0 -= e;
+      run_s1 -= e * Z_t.unsafe_col(idx);
+
+    } else {
+      // QUERY: record S0t and accumulate score
+      S0t(idx) = run_s0;
+      arma::uword k = (arma::uword)event_pseudo_idx[idx];
+      double inv_s0 = 1.0 / run_s0;
+      U += Z_t.unsafe_col(k) - run_s1 * inv_s0;
+    }
+  }
+
+  double inv_n = 1.0 / (double)n;
+  arma::vec s0t_out = S0t * inv_n;
+  return Rcpp::List::create(
+    Rcpp::Named("S0t") = Rcpp::NumericVector(s0t_out.begin(), s0t_out.end()),
+    Rcpp::Named("score") = U * inv_n
+  );
+}
+
+
 // Batched cross-fitted CV score norms: evaluates score norms at ALL lambda
 // points in one C++ call.  Avoids the R loop overhead that dominates CV time.
 //

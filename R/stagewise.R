@@ -268,15 +268,15 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
       r_re <- jfm_s0s1_wt_fast_cpp(tl_recur$type, tl_recur$idx, tl_recur$size,
                                       Z_pseudo, entry_subject, alpha, wt_de, n_re, n)
     } else {
-      r_de <- jfm_s0s1_fast_cpp(tl_death$type, tl_death$idx, tl_death$size,
-                                  Z_pseudo, beta, n_de, n)
-      r_re <- jfm_s0s1_fast_cpp(tl_recur$type, tl_recur$idx, tl_recur$size,
-                                  Z_pseudo, alpha, n_re, n)
+      r_de <- jfm_s0s1_score_fused_cpp(tl_death$type, tl_death$idx, tl_death$size,
+                                          Z_pseudo, beta, de_epi, n_de, n)
+      r_re <- jfm_s0s1_score_fused_cpp(tl_recur$type, tl_recur$idx, tl_recur$size,
+                                          Z_pseudo, alpha, re_epi, n_re, n)
     }
     list(res_de = r_de, res_re = r_re)
   }
 
-  # Initial S0t/S1t
+  # Initial computation
   ee <- .compute_ee(alpha, beta)
   S0t_de <- ee$res_de$S0t
   lambda0_d <- jfm_lambda0d_solution(td, d_td, n, S0t_de)
@@ -288,9 +288,9 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
   thetaK <- c(initial_alpha, initial_beta)
   normK <- 0
 
-  # Compute initial gradients using fast score
-  g1 <- (-1) * jfm_score_fast_cpp(re_epi, Z_pseudo, ee$res_re$S1t, S0t_re) / n
-  g2 <- (-1) * jfm_score_fast_cpp(de_epi, Z_pseudo, ee$res_de$S1t, S0t_de) / n
+  # Initial gradients (fused score from .compute_ee)
+  g1 <- (-1) * as.numeric(ee$res_re$score)
+  g2 <- (-1) * as.numeric(ee$res_de$score)
 
   # Gradient scaling: scale death (g2) up by max|g1|/max|g2|
   if (penalty %in% c("coop", "group")) {
@@ -349,9 +349,9 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
     normK <- coop_norm(thetaK, p)
     normK_update[k + 1] <- normK
 
-    # Scores via fast score
-    g1 <- (-1) * jfm_score_fast_cpp(re_epi, Z_pseudo, ee$res_re$S1t, S0t_re) / n
-    g2 <- (-1) * jfm_score_fast_cpp(de_epi, Z_pseudo, ee$res_de$S1t, S0t_de) / n
+    # Scores (fused with S0t computation)
+    g1 <- (-1) * as.numeric(ee$res_re$score)
+    g2 <- (-1) * as.numeric(ee$res_de$score)
 
     # Gradient scaling: scale death (g2) up
     if (penalty %in% c("coop", "group")) {
