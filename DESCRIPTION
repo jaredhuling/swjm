@@ -6,7 +6,9 @@ Authors@R: c(
            email = "huol@example.com"),
     person("Jiang", "Ziren", role = "aut"),
     person("Hou", "Jue", role = "aut"),
-    person("Huling", "Jared D.", role = "aut"))
+    person("Huling", "Jared D.", role = "aut"),
+    person(given = "Sy Han (Steven)", family = "Chiou", role = "ctb"),
+    person(given = "Chiung-Yu", family = "Huang", role = "ctb"))
 Description: Implements stagewise regression for variable selection in joint
     models of recurrent events and terminal events (semi-competing risks).
     Supports two model frameworks: the joint frailty model (Cox-type) and the

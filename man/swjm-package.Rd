@@ -51,4 +51,10 @@ Authors:
   \item Huling Jared D.
 }
 
+Other contributors:
+\itemize{
+  \item Sy Han (Steven) Chiou [contributor]
+  \item Chiung-Yu Huang [contributor]
+}
+
 }
