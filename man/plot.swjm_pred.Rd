@@ -67,10 +67,10 @@ display correctly reflects how much each predictor shifts the log-hazard
 }
 \examples{
 \donttest{
-dat  <- generate_data(n = 50, p = 5, scenario = 1, model = "jfm")
+dat  <- generate_data(n = 50, p = 10, scenario = 1, model = "jfm")
 cv   <- cv_stagewise(dat$data, model = "jfm", penalty = "coop",
                      max_iter = 100)
-newz <- matrix(rnorm(15), nrow = 3, ncol = 5)
+newz <- matrix(rnorm(30), nrow = 3, ncol = 10)
 pred <- predict(cv, newdata = newz)
 plot(pred, which_subject = 2)
 plot(pred, which_subject = 2, threshold = 0.05)

@@ -39,8 +39,7 @@ Invisibly returns `x`.
 dat <- generate_data(n = 50, p = 10, scenario = 1, model = "jfm")
 cv  <- cv_stagewise(dat$data, model = "jfm", penalty = "coop",
                     max_iter = 200)
-#> Error in folds1[[kk]]: subscript out of bounds
 plot(cv)
-#> Error: object 'cv' not found
+
 # }
 ```

@@ -101,26 +101,26 @@ shape = 4, scale = 1/4 is used. Censoring times are
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Summary:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Sample size:                                    30 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of recurrent event observed:             63 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Average number of recurrent event per subject:  2.1 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of recurrent event observed:             55 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Average number of recurrent event per subject:  1.833 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Proportion of subjects with a terminal event:   0.2 </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">dat</span><span class="op">$</span><span class="va">data</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   id    t.start     t.stop event status        x1         x2        x3</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1  1 0.00000000 0.04635022     1      0 0.6273156 -0.4036852 0.6022021</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2  1 0.04635022 0.04805637     1      0 0.6273156 -0.4036852 0.6022021</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3  1 0.04805637 0.55984159     1      0 0.6273156 -0.4036852 0.6022021</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4  1 0.55984159 1.32060851     1      0 0.6273156 -0.4036852 0.6022021</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5  1 1.32060851 1.60517574     1      0 0.6273156 -0.4036852 0.6022021</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6  1 1.60517574 1.89312387     0      0 0.6273156 -0.4036852 0.6022021</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>          x4        x5        x6         x7         x8        x9       x10</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1 0.2667309 0.8732985 0.9716343 -0.5239045 -0.3774046 0.4123239 0.6563171</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2 0.2667309 0.8732985 0.9716343 -0.5239045 -0.3774046 0.4123239 0.6563171</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3 0.2667309 0.8732985 0.9716343 -0.5239045 -0.3774046 0.4123239 0.6563171</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4 0.2667309 0.8732985 0.9716343 -0.5239045 -0.3774046 0.4123239 0.6563171</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5 0.2667309 0.8732985 0.9716343 -0.5239045 -0.3774046 0.4123239 0.6563171</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6 0.2667309 0.8732985 0.9716343 -0.5239045 -0.3774046 0.4123239 0.6563171</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   id   t.start    t.stop event status        x1         x2         x3        x4</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1  1 0.0000000 0.3222933     1      0 0.1313358 -0.4590607 -0.2478339 0.4998452</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2  1 0.3222933 0.5766185     1      0 0.1313358 -0.4590607 -0.2478339 0.4998452</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3  1 0.5766185 0.9428153     1      0 0.1313358 -0.4590607 -0.2478339 0.4998452</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4  1 0.9428153 1.2662159     1      0 0.1313358 -0.4590607 -0.2478339 0.4998452</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5  1 1.2662159 1.4086916     1      0 0.1313358 -0.4590607 -0.2478339 0.4998452</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6  1 1.4086916 2.2472515     1      0 0.1313358 -0.4590607 -0.2478339 0.4998452</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>          x5         x6         x7        x8        x9        x10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 0.8365068 -0.3354045 -0.1285257 0.5892879 0.6958139 -0.3235715</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2 0.8365068 -0.3354045 -0.1285257 0.5892879 0.6958139 -0.3235715</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3 0.8365068 -0.3354045 -0.1285257 0.5892879 0.6958139 -0.3235715</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4 0.8365068 -0.3354045 -0.1285257 0.5892879 0.6958139 -0.3235715</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5 0.8365068 -0.3354045 -0.1285257 0.5892879 0.6958139 -0.3235715</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6 0.8365068 -0.3354045 -0.1285257 0.5892879 0.6958139 -0.3235715</span>
 <span class="r-in"><span><span class="va">dat</span><span class="op">$</span><span class="va">alpha_true</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>  [1]  1.1 -1.1  0.1 -0.1  0.0  0.0  0.0  0.0  1.0 -1.0</span>
 <span class="r-in"><span><span class="va">dat</span><span class="op">$</span><span class="va">beta_true</span></span></span>

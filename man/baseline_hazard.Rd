@@ -30,7 +30,7 @@ JSCM, Nelson-Aalen estimators on the accelerated time scale are used.
 }
 \examples{
 \donttest{
-dat <- generate_data(n = 50, p = 5, scenario = 1, model = "jfm")
+dat <- generate_data(n = 50, p = 10, scenario = 1, model = "jfm")
 cv  <- cv_stagewise(dat$data, model = "jfm", penalty = "coop",
                     max_iter = 100)
 bh  <- baseline_hazard(cv)

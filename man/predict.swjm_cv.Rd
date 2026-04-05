@@ -76,14 +76,14 @@ accelerate events (shorter times); values less than 1 decelerate them
 }
 \examples{
 \donttest{
-dat <- generate_data(n = 50, p = 5, scenario = 1, model = "jfm")
+dat <- generate_data(n = 50, p = 10, scenario = 1, model = "jfm")
 cv  <- cv_stagewise(dat$data, model = "jfm", penalty = "coop",
                     max_iter = 100)
-newz <- matrix(rnorm(15), nrow = 3, ncol = 5)
+newz <- matrix(rnorm(30), nrow = 3, ncol = 10)
 pred <- predict(cv, newdata = newz)
 plot(pred)
 
-dat_jscm <- generate_data(n = 50, p = 5, scenario = 1, model = "jscm")
+dat_jscm <- generate_data(n = 50, p = 10, scenario = 1, model = "jscm")
 cv_jscm  <- cv_stagewise(dat_jscm$data, model = "jscm", penalty = "coop",
                           max_iter = 500)
 pred_jscm <- predict(cv_jscm, newdata = newz)

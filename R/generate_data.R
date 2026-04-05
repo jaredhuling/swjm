@@ -109,70 +109,35 @@ generate_data_jfm <- function(n, p, scenario = 1, b = 6.50,
   alpha.star <- numeric(p)
   beta.star  <- numeric(p)
 
+  # Helper: indices for the k-th 10% block (1-indexed), safe for any p >= 1
+  .blk <- function(k) {
+    lo <- floor(p * (k - 1) / 10) + 1L
+    hi <- floor(p * k / 10)
+    if (hi >= lo) lo:hi else integer(0)
+  }
+
   if (S == 1) {
-    # first 10% large alpha and small beta (+)
-    beta.star[1:(10 * 0.1)] <- 1.1
-    alpha.star[1:(10 * 0.1)] <- 0.1
-    # 10%-20% large alpha and small beta (-)
-    beta.star[(10 * 0.1 + 1):(10 * 0.2)] <- -1.1
-    alpha.star[(10 * 0.1 + 1):(10 * 0.2)] <- -0.1
-    # 20-30% small alpha and large beta (+)
-    beta.star[(10 * 0.2 + 1):(10 * 0.3)] <- 0.1
-    alpha.star[(10 * 0.2 + 1):(10 * 0.3)] <- 1.1
-    # 30%-40% small alpha and large beta (-)
-    beta.star[(10 * 0.3 + 1):(10 * 0.4)] <- -0.1
-    alpha.star[(10 * 0.3 + 1):(10 * 0.4)] <- -1.1
-    # 80-90% similar magnitude (+)
-    beta.star[(10 * 0.8 + 1):(10 * 0.9)] <- 1
-    alpha.star[(10 * 0.8 + 1):(10 * 0.9)] <- 1
-    # 90-100% similar magnitude (-)
-    beta.star[(10 * 0.9 + 1):(10 * 1)] <- -1
-    alpha.star[(10 * 0.9 + 1):(10 * 1)] <- -1
+    beta.star[.blk(1)]  <-  1.1;  alpha.star[.blk(1)]  <-  0.1
+    beta.star[.blk(2)]  <- -1.1;  alpha.star[.blk(2)]  <- -0.1
+    beta.star[.blk(3)]  <-  0.1;  alpha.star[.blk(3)]  <-  1.1
+    beta.star[.blk(4)]  <- -0.1;  alpha.star[.blk(4)]  <- -1.1
+    beta.star[.blk(9)]  <-  1;    alpha.star[.blk(9)]  <-  1
+    beta.star[.blk(10)] <- -1;    alpha.star[.blk(10)] <- -1
 
   } else if (S == 2) {
-    # give the 10% to 20% both strong signal and 20% to 30% both weak signal
-    beta.star[(10 * 0.1 + 1):(10 * 0.2)] <- -1
-    beta.star[(10 * 0.2 + 1):(10 * 0.3)] <- -1
-
-    # first 10%
-    beta.star[1:(10 * 0.1)] <- 1
-
-    # 30% to 40%
-    beta.star[(10 * 0.3 + 1):(10 * 0.4)] <- 1
-
-    # 80% to 90%
-    beta.star[(10 * 0.8 + 1):(10 * 0.9)] <- 1
-
-    # 0-10%
-    alpha.star[1:(10 * 0.1)] <- 1
-    # 10%-20%
-    alpha.star[(10 * 0.1 + 1):(10 * 0.2)] <- -1
-    # 20%-30%
-    alpha.star[(10 * 0.2 + 1):(10 * 0.3)] <- 1
-    # 30%-40%
-    alpha.star[(10 * 0.3 + 1):(10 * 0.4)] <- -1
-    # 90% to 100%
-    alpha.star[(10 * 0.9 + 1):10] <- 1
+    beta.star[.blk(1)]  <-  1;    alpha.star[.blk(1)]  <-  1
+    beta.star[.blk(2)]  <- -1;    alpha.star[.blk(2)]  <- -1
+    beta.star[.blk(3)]  <- -1;    alpha.star[.blk(3)]  <-  1
+    beta.star[.blk(4)]  <-  1;    alpha.star[.blk(4)]  <- -1
+    beta.star[.blk(9)]  <-  1;    alpha.star[.blk(10)] <-  1
 
   } else if (S == 3) {
-    # 10%: alpha:1 beta: -1
-    beta.star[1:(10 * 0.1)] <- 1
-    alpha.star[1:(10 * 0.1)] <- -1
-    # 10-20%: alpha:-1 beta: 1
-    beta.star[(10 * 0.1 + 1):(10 * 0.2)] <- -1
-    alpha.star[(10 * 0.1 + 1):(10 * 0.2)] <- 1
-    # 20-30%: alpha:2 beta: -1
-    beta.star[(10 * 0.2 + 1):(10 * 0.3)] <- 1.5
-    alpha.star[(10 * 0.2 + 1):(10 * 0.3)] <- -1
-    # 30-40%: alpha:-1 beta: 2
-    beta.star[(10 * 0.3 + 1):(10 * 0.4)] <- -1
-    alpha.star[(10 * 0.3 + 1):(10 * 0.4)] <- 1.5
-    # 80-90%: alpha:1 beta: 0
-    beta.star[(10 * 0.8 + 1):(10 * 0.9)] <- 1
-    alpha.star[(10 * 0.8 + 1):(10 * 0.9)] <- 0
-    # 90-100%: alpha:0 beta: 1
-    beta.star[(10 * 0.9 + 1):10] <- 0
-    alpha.star[(10 * 0.9 + 1):10] <- 1
+    beta.star[.blk(1)]  <-  1;    alpha.star[.blk(1)]  <- -1
+    beta.star[.blk(2)]  <- -1;    alpha.star[.blk(2)]  <-  1
+    beta.star[.blk(3)]  <-  1.5;  alpha.star[.blk(3)]  <- -1
+    beta.star[.blk(4)]  <- -1;    alpha.star[.blk(4)]  <-  1.5
+    beta.star[.blk(9)]  <-  1
+    alpha.star[.blk(10)] <- 1
   } else {
     beta.star <- alpha.star <- c(-0.5, 0.5)
   }

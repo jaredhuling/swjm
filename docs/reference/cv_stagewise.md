@@ -127,9 +127,9 @@ cv_res
 #> 
 #>   Covariates (p):              10
 #>   Lambda grid size:            101
-#>   Best position (combined):    101  (lambda = 2.008)
-#>   Selected variables:          1 readmission, 1 death
-#>     Readmission (alpha): 9
-#>     Death (beta):        9
+#>   Best position (combined):    101  (lambda = 1.06)
+#>   Selected variables:          2 readmission, 2 death
+#>     Readmission (alpha): 9, 10
+#>     Death (beta):        9, 10
 # }
 ```
