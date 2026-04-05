@@ -86,17 +86,14 @@ display correctly reflects how much each predictor shifts the log-hazard
 
 ``` r
 # \donttest{
-dat  <- generate_data(n = 50, p = 5, scenario = 1, model = "jfm")
-#> Error in beta %*% z: non-conformable arguments
+dat  <- generate_data(n = 50, p = 10, scenario = 1, model = "jfm")
 cv   <- cv_stagewise(dat$data, model = "jfm", penalty = "coop",
                      max_iter = 100)
-#> Error: object 'dat' not found
-newz <- matrix(rnorm(15), nrow = 3, ncol = 5)
+newz <- matrix(rnorm(30), nrow = 3, ncol = 10)
 pred <- predict(cv, newdata = newz)
-#> Error: object 'cv' not found
 plot(pred, which_subject = 2)
-#> Error: object 'pred' not found
+
 plot(pred, which_subject = 2, threshold = 0.05)
-#> Error: object 'pred' not found
+
 # }
 ```

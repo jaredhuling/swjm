@@ -106,25 +106,30 @@ accelerate events (shorter times); values less than 1 decelerate them
 
 ``` r
 # \donttest{
-dat <- generate_data(n = 50, p = 5, scenario = 1, model = "jfm")
-#> Error in beta %*% z: non-conformable arguments
+dat <- generate_data(n = 50, p = 10, scenario = 1, model = "jfm")
 cv  <- cv_stagewise(dat$data, model = "jfm", penalty = "coop",
                     max_iter = 100)
-#> Error: object 'dat' not found
-newz <- matrix(rnorm(15), nrow = 3, ncol = 5)
+newz <- matrix(rnorm(30), nrow = 3, ncol = 10)
 pred <- predict(cv, newdata = newz)
-#> Error: object 'cv' not found
 plot(pred)
-#> Error: object 'pred' not found
 
-dat_jscm <- generate_data(n = 50, p = 5, scenario = 1, model = "jscm")
-#> Error in reReg::simGSC(n = n, para = para, xmat = X, tau = 60, frailty = gamma,     censoring = C, summary = TRUE): Parameter alpha does not match with the number of covariates.
+
+dat_jscm <- generate_data(n = 50, p = 10, scenario = 1, model = "jscm")
+#> Call: 
+#> reReg::simGSC(n = n, summary = TRUE, para = para, xmat = X, censoring = C, 
+#>     frailty = gamma, tau = 60)
+#> 
+#> Summary:
+#> Sample size:                                    50 
+#> Number of recurrent event observed:             102 
+#> Average number of recurrent event per subject:  2.04 
+#> Proportion of subjects with a terminal event:   0.2 
+#> 
+#> 
 cv_jscm  <- cv_stagewise(dat_jscm$data, model = "jscm", penalty = "coop",
                           max_iter = 500)
-#> Error: object 'dat_jscm' not found
 pred_jscm <- predict(cv_jscm, newdata = newz)
-#> Error: object 'cv_jscm' not found
 plot(pred_jscm)
-#> Error: object 'pred_jscm' not found
+
 # }
 ```

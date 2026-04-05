@@ -39,14 +39,17 @@ A data frame with column `time` and, depending on `which`,
 
 ``` r
 # \donttest{
-dat <- generate_data(n = 50, p = 5, scenario = 1, model = "jfm")
-#> Error in beta %*% z: non-conformable arguments
+dat <- generate_data(n = 50, p = 10, scenario = 1, model = "jfm")
 cv  <- cv_stagewise(dat$data, model = "jfm", penalty = "coop",
                     max_iter = 100)
-#> Error: object 'dat' not found
 bh  <- baseline_hazard(cv)
-#> Error: object 'cv' not found
 head(bh)
-#> Error: object 'bh' not found
+#>          time cumhaz_readmission cumhaz_death
+#> 1 0.002991397         0.01991622            0
+#> 2 0.005471293         0.03983146            0
+#> 3 0.007580442         0.05976592            0
+#> 4 0.010431138         0.07971071            0
+#> 5 0.015063521         0.09966161            0
+#> 6 0.016583838         0.11962885            0
 # }
 ```
