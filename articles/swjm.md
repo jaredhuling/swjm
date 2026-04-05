@@ -504,15 +504,15 @@ For JSCM, Nelson-Aalen baselines on the accelerated time scale are used
 
 ``` r
 set.seed(7)
-newz <- matrix(rnorm(30), nrow = 3, ncol = 10)
-rownames(newz) <- paste0("Patient_", 1:3)
+newz <- matrix(rnorm(30), nrow = 12, ncol = 10)
+rownames(newz) <- paste0("Patient_", 1:12)
 colnames(newz) <- paste0("x", 1:10)
 
 pred <- predict(cv_jfm, newdata = newz)
 pred
 #> swjm predictions (jfm)
 #> 
-#>   Subjects:                3
+#>   Subjects:                12
 #>   Time points:             1117
 #>   Time range:              [8.134e-05, 6.153]
 #> 
@@ -531,10 +531,19 @@ The `swjm_pred` object contains:
 ``` r
 # Survival probabilities for all subjects at first few time points
 round(pred$S_re[, 1:5], 3)
-#>           t=8.134e-05 t=0.0002363 t=0.0002812 t=0.0003871 t=0.0006399
-#> Patient_1       0.991       0.991       0.983       0.974       0.965
-#> Patient_2       0.999       0.999       0.999       0.998       0.997
-#> Patient_3       0.999       0.999       0.998       0.997       0.996
+#>            t=8.134e-05 t=0.0002363 t=0.0002812 t=0.0003871 t=0.0006399
+#> Patient_1        0.999       0.999       0.998       0.998       0.997
+#> Patient_2        1.000       1.000       1.000       1.000       1.000
+#> Patient_3        1.000       1.000       1.000       1.000       1.000
+#> Patient_4        1.000       1.000       0.999       0.999       0.998
+#> Patient_5        1.000       1.000       1.000       1.000       1.000
+#> Patient_6        0.995       0.995       0.990       0.985       0.980
+#> Patient_7        0.998       0.998       0.996       0.994       0.992
+#> Patient_8        1.000       1.000       1.000       1.000       1.000
+#> Patient_9        1.000       1.000       0.999       0.999       0.999
+#> Patient_10       0.999       0.999       0.998       0.996       0.995
+#> Patient_11       1.000       1.000       1.000       1.000       0.999
+#> Patient_12       0.983       0.983       0.966       0.949       0.932
 ```
 
 [`plot()`](https://rdrr.io/r/graphics/plot.default.html) on a
@@ -543,7 +552,7 @@ both processes (all subjects in grey, highlighted subject in color) plus
 bar charts of predictor contributions:
 
 ``` r
-plot(pred, which_subject = 1)
+plot(pred, which_subject = 7)
 ```
 
 ![](swjm_files/figure-html/plot-pred-1.png)
@@ -879,7 +888,7 @@ Readmission log-hazard contributions for Patient_1 (nonzero):
 ``` r
 round(c1_re[c1_re != 0], 4)
 #>      x1      x2      x3      x4      x5      x7      x8      x9     x10 
-#>  2.3237  0.4096  0.0953 -0.0855  0.0015 -0.0001  0.0026  1.0871 -0.5277
+#>  2.3237 -2.2667  0.1622 -0.0292  0.0000  0.0412  0.0046  0.6389  0.0043
 ```
 
 Death log-hazard contributions for Patient_1 (nonzero):
@@ -887,7 +896,7 @@ Death log-hazard contributions for Patient_1 (nonzero):
 ``` r
 round(c1_de[c1_de != 0], 4)
 #>      x1      x2      x3      x4      x5      x6      x7      x8      x9     x10 
-#>  0.6201  0.0150  0.8772 -2.5608  0.0228 -0.0047  0.0000  0.0564  1.1817 -0.5375
+#>  0.6201 -0.0829  1.4925 -0.8748  0.0000 -0.0229  0.0203  0.1017  0.6945  0.0044
 ```
 
 ------------------------------------------------------------------------
