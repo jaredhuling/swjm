@@ -15,7 +15,8 @@ cv_stagewise(
   eps = NULL,
   max_iter = NULL,
   pp = NULL,
-  estimate_frailty = FALSE
+  estimate_frailty = FALSE,
+  ncores = 1L
 )
 ```
 
@@ -60,6 +61,13 @@ cv_stagewise(
   Logical. For JFM only: if `TRUE`, estimates the frailty variance and
   uses frailty weights in the estimating equations (passed to
   `stagewise_fit`).
+
+- ncores:
+
+  Integer. Number of cores for parallel fold training (default 1,
+  sequential). Uses
+  [`parallel::parLapply`](https://rdrr.io/r/parallel/clusterApply.html)
+  with a PSOCK cluster, which works on all platforms including Windows.
 
 ## Value
 

@@ -64,3 +64,9 @@ Authors:
 - Hou Jue
 
 - Huling Jared D.
+
+Other contributors:
+
+- Sy Han (Steven) Chiou \[contributor\]
+
+- Chiung-Yu Huang \[contributor\]

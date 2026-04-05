@@ -50,7 +50,8 @@ using K-fold cross-validation with cross-fitted estimating equations.</p>
 <span>  eps <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  max_iter <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  pp <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  estimate_frailty <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  estimate_frailty <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  ncores <span class="op">=</span> <span class="fl">1L</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -97,6 +98,12 @@ from a full-data stagewise fit.</p></dd>
 <dd><p>Logical. For JFM only: if <code>TRUE</code>, estimates
 the frailty variance and uses frailty weights in the estimating equations
 (passed to <code>stagewise_fit</code>).</p></dd>
+
+
+<dt id="arg-ncores">ncores<a class="anchor" aria-label="anchor" href="#arg-ncores"></a></dt>
+<dd><p>Integer. Number of cores for parallel fold training
+(default 1, sequential). Uses <code><a href="https://rdrr.io/r/parallel/clusterApply.html" class="external-link">parallel::parLapply</a></code> with a
+PSOCK cluster, which works on all platforms including Windows.</p></dd>
 
 </dl></div>
     <div class="section level2">

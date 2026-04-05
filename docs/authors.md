@@ -10,6 +10,10 @@
 
 - **Huling Jared D.**. Author.
 
+- **Sy Han (Steven) Chiou**. Contributor.
+
+- **Chiung-Yu Huang**. Contributor.
+
 ## Citation
 
 Lingfeng H, Ziren J, Jue H, Jared D. H (2026). *swjm: Stagewise Variable
