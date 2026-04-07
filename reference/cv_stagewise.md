@@ -70,6 +70,11 @@ cv_stagewise(
   [`parallel::parLapply`](https://rdrr.io/r/parallel/clusterApply.html)
   with a PSOCK cluster, which works on all platforms including Windows.
 
+- standardize:
+
+  Logical. If `TRUE` (default), covariates are standardized before
+  fitting (passed to `stagewise_fit`).
+
 ## Value
 
 An object of class `"swjm_cv"`, a list with components:
