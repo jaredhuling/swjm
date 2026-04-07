@@ -45,6 +45,9 @@ the frailty variance and uses frailty weights in the estimating equations
 \item{ncores}{Integer. Number of cores for parallel fold training
 (default 1, sequential). Uses \code{parallel::parLapply} with a
 PSOCK cluster, which works on all platforms including Windows.}
+
+\item{standardize}{Logical. If \code{TRUE} (default), covariates are
+standardized before fitting (passed to \code{stagewise_fit}).}
 }
 \value{
 An object of class \code{"swjm_cv"}, a list with components:
