@@ -16,7 +16,8 @@ cv_stagewise(
   max_iter = NULL,
   pp = NULL,
   estimate_frailty = FALSE,
-  ncores = 1L
+  ncores = 1L,
+  standardize = TRUE
 )
 ```
 
@@ -127,7 +128,7 @@ cv_res
 #> 
 #>   Covariates (p):              10
 #>   Lambda grid size:            101
-#>   Best position (combined):    101  (lambda = 1.062)
+#>   Best position (combined):    101  (lambda = 1.068)
 #>   Selected variables:          3 readmission, 3 death
 #>     Readmission (alpha): 2, 9, 10
 #>     Death (beta):        2, 9, 10
