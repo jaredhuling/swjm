@@ -25,6 +25,12 @@
 #'   the frailty variance and uses the Kalbfleisch et al. (2013) frailty
 #'   weights \eqn{w_i(t)} in the estimating equations. If \code{FALSE}
 #'   (default), uses unit weights (simplified model without frailty).
+#' @param standardize Logical. If \code{TRUE} (default), covariates are
+#'   divided by their standard deviations before fitting and coefficients
+#'   are rescaled back to the original scale. For the JFM with time-varying
+#'   covariates, the SD is computed across all rows (all time points and
+#'   subjects). For the JSCM with time-invariant covariates, the SD is
+#'   computed across subjects only.
 #'
 #' @return An object of class \code{"swjm_path"}, a list with components:
 #'   \describe{
@@ -50,19 +56,41 @@
 stagewise_fit <- function(data, model = c("jfm", "jscm"),
                           penalty = c("coop", "lasso", "group"),
                           eps = NULL, max_iter = NULL, pp = NULL,
-                          estimate_frailty = FALSE) {
+                          estimate_frailty = FALSE,
+                          standardize = TRUE) {
   model <- match.arg(model)
   penalty <- match.arg(penalty)
 
   p <- ncol(data) - 5L
+  cov_cols <- 6:ncol(data)
   initial_alpha <- numeric(p)
   initial_beta <- numeric(p)
+
+  # Standardize covariates (divide by SD, no centering — Cox/AFT models
+  # absorb the mean into the baseline)
+  if (standardize) {
+    if (model == "jfm") {
+      # Time-varying: SD across ALL rows (all time points, all subjects)
+      cov_sd <- apply(data[, cov_cols, drop = FALSE], 2, sd)
+    } else {
+      # Time-invariant (JSCM): SD across subjects only (one row per subject)
+      subj_rows <- data$event == 0
+      cov_sd <- apply(data[subj_rows, cov_cols, drop = FALSE], 2, sd)
+    }
+    # Guard against zero-variance covariates
+    cov_sd[cov_sd == 0] <- 1
+    data_fit <- data
+    data_fit[, cov_cols] <- sweep(data[, cov_cols, drop = FALSE], 2, cov_sd, "/")
+  } else {
+    data_fit <- data
+    cov_sd <- rep(1, p)
+  }
 
   if (model == "jfm") {
     if (is.null(eps)) eps <- 0.1
     if (is.null(max_iter)) max_iter <- 5000L
     if (is.null(pp)) pp <- max_iter   # disable early stopping by default for JFM
-    result <- stagewise_jfm(initial_alpha, initial_beta, data, penalty,
+    result <- stagewise_jfm(initial_alpha, initial_beta, data_fit, penalty,
                             eps1 = 1e-6, adap = 1L, eps2 = eps,
                             iter = max_iter, pp = pp,
                             estimate_frailty = estimate_frailty)
@@ -70,17 +98,25 @@ stagewise_fit <- function(data, model = c("jfm", "jscm"),
     if (is.null(eps)) eps <- 0.01
     if (is.null(max_iter)) max_iter <- 5000L
     if (is.null(pp)) pp <- max_iter   # disable early stopping by default for JSCM
-    result <- stagewise_jscm(initial_alpha, initial_beta, data, penalty,
+    result <- stagewise_jscm(initial_alpha, initial_beta, data_fit, penalty,
                              eps1 = 1e-6, adap = 1L, eps2 = eps,
                              iter = max_iter, pp = pp)
   }
 
+  # Rescale coefficients back to original covariate scale:
+  # If z_std = z / sd, then alpha_std * z_std = (alpha_std / sd) * z,
+  # so alpha_orig = alpha_std / sd.
+  theta_raw <- result$theta_update
+  theta_rescaled <- theta_raw
+  theta_rescaled[1:p, ]         <- theta_raw[1:p, , drop = FALSE]         / cov_sd
+  theta_rescaled[(p + 1):(2*p), ] <- theta_raw[(p + 1):(2*p), , drop = FALSE] / cov_sd
+
   structure(
     list(
       k = result$k,
-      theta = result$theta_update,
-      alpha = result$theta_update[1:p, , drop = FALSE],
-      beta  = result$theta_update[(p + 1):(2 * p), , drop = FALSE],
+      theta = theta_rescaled,
+      alpha = theta_rescaled[1:p, , drop = FALSE],
+      beta  = theta_rescaled[(p + 1):(2 * p), , drop = FALSE],
       lambda = result$lambda,
       norm = result$normK_update,
       norm_g1 = result$norm2_g1_update,
@@ -89,7 +125,9 @@ stagewise_fit <- function(data, model = c("jfm", "jscm"),
       g2 = result$g2_update,
       model = model,
       penalty = penalty,
-      p = p
+      p = p,
+      cov_sd = cov_sd,
+      standardize = standardize
     ),
     class = "swjm_path"
   )

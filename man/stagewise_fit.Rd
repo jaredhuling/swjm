@@ -11,7 +11,8 @@ stagewise_fit(
   eps = NULL,
   max_iter = NULL,
   pp = NULL,
-  estimate_frailty = FALSE
+  estimate_frailty = FALSE,
+  standardize = TRUE
 )
 }
 \arguments{
@@ -36,6 +37,13 @@ uses adaptive step size.}
 the frailty variance and uses the Kalbfleisch et al. (2013) frailty
 weights \eqn{w_i(t)} in the estimating equations. If \code{FALSE}
 (default), uses unit weights (simplified model without frailty).}
+
+\item{standardize}{Logical. If \code{TRUE} (default), covariates are
+divided by their standard deviations before fitting and coefficients
+are rescaled back to the original scale. For the JFM with time-varying
+covariates, the SD is computed across all rows (all time points and
+subjects). For the JSCM with time-invariant covariates, the SD is
+computed across subjects only.}
 }
 \value{
 An object of class \code{"swjm_path"}, a list with components:

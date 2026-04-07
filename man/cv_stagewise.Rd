@@ -14,7 +14,8 @@ cv_stagewise(
   max_iter = NULL,
   pp = NULL,
   estimate_frailty = FALSE,
-  ncores = 1L
+  ncores = 1L,
+  standardize = TRUE
 )
 }
 \arguments{

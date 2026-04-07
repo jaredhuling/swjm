@@ -59,7 +59,8 @@ cv_stagewise <- function(data, model = c("jfm", "jscm"),
                          K = 5L, lambda_seq = NULL,
                          eps = NULL, max_iter = NULL, pp = NULL,
                          estimate_frailty = FALSE,
-                         ncores = 1L) {
+                         ncores = 1L,
+                         standardize = TRUE) {
   model <- match.arg(model)
   penalty <- match.arg(penalty)
 
@@ -78,38 +79,57 @@ cv_stagewise <- function(data, model = c("jfm", "jscm"),
     if (is.null(pp)) pp <- max_iter   # disable early stopping by default for JSCM
   }
 
-  # Always run full-data fit (needed for coef extraction)
-  full_fit <- stagewise_fit(data, model = model, penalty = penalty,
+  # Standardize covariates once (used for full fit, fold fits, and CF evaluation)
+  cov_cols <- 6:ncol(data)
+  if (standardize) {
+    if (model == "jfm") {
+      cov_sd <- apply(data[, cov_cols, drop = FALSE], 2, sd)
+    } else {
+      cov_sd <- apply(data[data$event == 0, cov_cols, drop = FALSE], 2, sd)
+    }
+    cov_sd[cov_sd == 0] <- 1
+    data_std <- data
+    data_std[, cov_cols] <- sweep(data[, cov_cols, drop = FALSE], 2, cov_sd, "/")
+  } else {
+    data_std <- data
+    cov_sd <- rep(1, p)
+  }
+
+  # Full-data fit on standardized data (standardize=FALSE since already done)
+  full_fit <- stagewise_fit(data_std, model = model, penalty = penalty,
                             eps = eps, max_iter = max_iter, pp = pp,
-                            estimate_frailty = estimate_frailty)
+                            estimate_frailty = estimate_frailty,
+                            standardize = FALSE)
 
   if (is.null(lambda_seq)) {
     lambda_seq <- full_fit$lambda
-    # Extract decreasing path
     dec_idx <- extract_decreasing_indices(lambda_seq)
     lambda_seq <- lambda_seq[dec_idx]
   }
 
+  # CV fold fits + cross-fitted EE on standardized data
   if (model == "jfm") {
-    result <- cv_jfm(data, penalty, lambda_seq, K, initial_alpha,
+    result <- cv_jfm(data_std, penalty, lambda_seq, K, initial_alpha,
                      initial_beta, eps1 = 1e-6, adap = 1L, eps2 = eps,
                      iter = max_iter, pp = pp,
                      estimate_frailty = estimate_frailty,
                      ncores = ncores)
   } else {
-    result <- cv_jscm(data, penalty, lambda_seq, K, initial_alpha,
+    result <- cv_jscm(data_std, penalty, lambda_seq, K, initial_alpha,
                       initial_beta, eps1 = 1e-6, adap = 1L, eps2 = eps,
                       iter = max_iter, pp = pp,
                       ncores = ncores)
   }
 
   # --- Derived quantities from the full-data path ---
+  # Rescale standardized coefficients back to original covariate scale
   lambda_path <- full_fit$lambda
   dec_idx     <- extract_decreasing_indices(lambda_path)
-  theta_dec   <- full_fit$theta[, dec_idx, drop = FALSE]
-  lambda_dec  <- lambda_path[dec_idx]
+  theta_dec_std <- full_fit$theta[, dec_idx, drop = FALSE]
+  theta_dec     <- theta_dec_std / c(cov_sd, cov_sd)  # alpha and beta both rescaled
+  lambda_dec    <- lambda_path[dec_idx]
 
-  # Best alpha / beta at optimal lambda
+  # Best alpha / beta at optimal lambda (on original scale)
   target_lambda <- lambda_seq[result$position_CF]
   lam_best      <- lambda_interp(lambda_dec, target_lambda)
   theta_best    <- as.numeric(theta_dec[, lam_best$left])  * lam_best$frac +
@@ -154,7 +174,9 @@ cv_stagewise <- function(data, model = c("jfm", "jscm"),
         n_active_alpha = n_active_alpha,
         n_active_beta  = n_active_beta,
         n_active       = n_active,
-        baseline       = baseline
+        baseline       = baseline,
+        cov_sd         = cov_sd,
+        standardize    = standardize
       )),
     class = "swjm_cv"
   )
