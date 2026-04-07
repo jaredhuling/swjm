@@ -65,6 +65,8 @@ cv_stagewise <- function(data, model = c("jfm", "jscm"),
                          standardize = TRUE) {
   model <- match.arg(model)
   penalty <- match.arg(penalty)
+  data <- prepare_data(data, caller = "cv_stagewise")
+  validate_data(data, caller = "cv_stagewise")
 
   p <- ncol(data) - 5L
   initial_alpha <- numeric(p)
@@ -87,7 +89,7 @@ cv_stagewise <- function(data, model = c("jfm", "jscm"),
     if (model == "jfm") {
       cov_sd <- apply(data[, cov_cols, drop = FALSE], 2, sd)
     } else {
-      cov_sd <- apply(data[data$event == 0, cov_cols, drop = FALSE], 2, sd)
+      cov_sd <- apply(data[!duplicated(data$id), cov_cols, drop = FALSE], 2, sd)
     }
     cov_sd[cov_sd == 0] <- 1
     data_std <- data

@@ -61,6 +61,9 @@ stagewise_fit <- function(data, model = c("jfm", "jscm"),
   model <- match.arg(model)
   penalty <- match.arg(penalty)
 
+  data <- prepare_data(data, caller = "stagewise_fit")
+  validate_data(data, caller = "stagewise_fit")
+
   p <- ncol(data) - 5L
   cov_cols <- 6:ncol(data)
   initial_alpha <- numeric(p)
@@ -73,8 +76,9 @@ stagewise_fit <- function(data, model = c("jfm", "jscm"),
       # Time-varying: SD across ALL rows (all time points, all subjects)
       cov_sd <- apply(data[, cov_cols, drop = FALSE], 2, sd)
     } else {
-      # Time-invariant (JSCM): SD across subjects only (one row per subject)
-      subj_rows <- data$event == 0
+      # Time-invariant (JSCM): SD across subjects (one terminal row per subject,
+      # validated above)
+      subj_rows <- !duplicated(data$id)
       cov_sd <- apply(data[subj_rows, cov_cols, drop = FALSE], 2, sd)
     }
     # Guard against zero-variance covariates

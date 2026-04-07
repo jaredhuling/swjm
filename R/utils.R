@@ -2,6 +2,177 @@
 # Shared utility functions used by both JFM and JSCM implementations
 # ============================================================================
 
+
+#' Prepare Data for swjm Functions
+#'
+#' Expands factor and character covariate columns into dummy (indicator)
+#' variables. The first 5 columns (id, t.start, t.stop, event, status) are
+#' left unchanged. For each factor/character column with L levels, L-1 dummy
+#' columns are created (reference level dropped). A message is printed when
+#' expansion occurs.
+#'
+#' @param data A data frame.
+#' @param caller Character string naming the calling function (for messages).
+#'
+#' @return A data frame with factor/character covariates replaced by numeric
+#'   dummy columns.
+#'
+#' @keywords internal
+prepare_data <- function(data, caller = "swjm") {
+  if (!is.data.frame(data) || ncol(data) <= 5L) return(data)
+
+  meta_cols <- data[, 1:5, drop = FALSE]
+  cov_df    <- data[, 6:ncol(data), drop = FALSE]
+
+  needs_expand <- vapply(cov_df, function(x) {
+    is.factor(x) || is.character(x) || is.logical(x)
+  }, logical(1))
+
+  if (!any(needs_expand)) return(data)
+
+  expanded_names <- names(cov_df)[needs_expand]
+  message(caller, ": expanding non-numeric covariates to dummy variables: ",
+          paste(expanded_names, collapse = ", "))
+
+  # Convert characters to factors
+  for (j in which(needs_expand)) {
+    if (is.character(cov_df[[j]]) || is.logical(cov_df[[j]])) {
+      cov_df[[j]] <- factor(cov_df[[j]])
+    }
+  }
+  
+  # For columns that were already numeric, model.matrix keeps them as-is.
+  # For factors, it creates L-1 dummy columns (treatment contrasts).
+  # We need to remove the original factor columns' single column and
+  # replace with the dummies.
+
+  # Simpler approach: build model matrix from scratch with proper contrasts
+  # Use contrasts that drop the first level (default treatment contrasts)
+  frm <- reformulate(names(cov_df))
+  mm <- model.matrix(frm, data = cov_df)
+  # Remove intercept column
+  mm <- mm[, colnames(mm) != "(Intercept)", drop = FALSE]
+
+  result <- cbind(meta_cols, as.data.frame(mm))
+  rownames(result) <- rownames(data)
+  result
+}
+
+
+#' Validate Recurrent-Event Data Frame
+#'
+#' Checks that a data frame has the required structure for swjm functions:
+#' columns id, t.start, t.stop, event, status, and at least one covariate.
+#' Produces informative error messages for each violated requirement.
+#'
+#' @param data Object to validate.
+#' @param caller Character string naming the calling function (for error messages).
+#'
+#' @return Invisibly returns \code{TRUE} if valid; throws an error otherwise.
+#'
+#' @keywords internal
+validate_data <- function(data, caller = "swjm") {
+  problems <- character(0)
+
+  if (!is.data.frame(data)) {
+    stop(caller, ": 'data' must be a data frame, got ", class(data)[1], ".",
+         call. = FALSE)
+  }
+
+  required <- c("id", "t.start", "t.stop", "event", "status")
+  missing_cols <- setdiff(required, names(data))
+  if (length(missing_cols) > 0) {
+    problems <- c(problems,
+      paste0("Missing required columns: ", paste(missing_cols, collapse = ", "),
+             ". Expected: id, t.start, t.stop, event, status, x1, ..., xp."))
+  }
+
+  p <- ncol(data) - 5L
+  if (p < 1) {
+    problems <- c(problems,
+      paste0("Data must have at least 6 columns (5 required + covariates), ",
+             "but has ", ncol(data), "."))
+  }
+
+  if (length(problems) == 0 && all(required %in% names(data))) {
+    # Check column order: first 5 must be id, t.start, t.stop, event, status
+    if (!identical(names(data)[1:5], required)) {
+      problems <- c(problems,
+        paste0("First 5 columns must be id, t.start, t.stop, event, status (in order), ",
+               "but got: ", paste(names(data)[1:5], collapse = ", "), "."))
+    }
+
+    # Check numeric types
+    for (col in c("t.start", "t.stop")) {
+      if (!is.numeric(data[[col]])) {
+        problems <- c(problems,
+          paste0("Column '", col, "' must be numeric, got ", class(data[[col]])[1], "."))
+      }
+    }
+
+    # Check event and status are 0/1
+    for (col in c("event", "status")) {
+      vals <- unique(data[[col]])
+      if (!all(vals %in% c(0, 1))) {
+        problems <- c(problems,
+          paste0("Column '", col, "' must contain only 0 and 1, ",
+                 "got values: ", paste(sort(unique(vals)), collapse = ", "), "."))
+      }
+    }
+
+    # Check t.start <= t.stop
+    if (is.numeric(data$t.start) && is.numeric(data$t.stop)) {
+      bad <- sum(data$t.start > data$t.stop)
+      if (bad > 0) {
+        problems <- c(problems,
+          paste0(bad, " row(s) have t.start > t.stop."))
+      }
+    }
+
+    # Check each subject has exactly one terminal row (event == 0)
+    n_terminal <- tapply(data$event == 0, data$id, sum)
+    bad_subj <- names(n_terminal)[n_terminal != 1]
+    if (length(bad_subj) > 0) {
+      n_show <- min(length(bad_subj), 5)
+      problems <- c(problems,
+        paste0(length(bad_subj), " subject(s) do not have exactly one terminal row ",
+               "(event == 0): ", paste(bad_subj[1:n_show], collapse = ", "),
+               if (length(bad_subj) > n_show) ", ..." else "", "."))
+    }
+
+    # Check covariates are numeric
+    cov_cols <- 6:ncol(data)
+    non_numeric <- names(data)[cov_cols][!vapply(data[cov_cols], is.numeric, logical(1))]
+    if (length(non_numeric) > 0) {
+      problems <- c(problems,
+        paste0("Covariate columns must be numeric. Non-numeric: ",
+               paste(non_numeric, collapse = ", "), "."))
+    }
+
+    # Check for NA/NaN/Inf
+    has_na <- vapply(data, function(x) any(is.na(x) | is.nan(x)), logical(1))
+    if (any(has_na)) {
+      problems <- c(problems,
+        paste0("Data contains NA/NaN values in columns: ",
+               paste(names(data)[has_na], collapse = ", "), "."))
+    }
+    has_inf <- vapply(data[cov_cols], function(x) any(is.infinite(x)), logical(1))
+    if (any(has_inf)) {
+      problems <- c(problems,
+        paste0("Data contains Inf values in covariate columns: ",
+               paste(names(data)[cov_cols][has_inf], collapse = ", "), "."))
+    }
+  }
+
+  if (length(problems) > 0) {
+    stop(caller, ": invalid data frame.\n  ",
+         paste(problems, collapse = "\n  "),
+         call. = FALSE)
+  }
+
+  invisible(TRUE)
+}
+
 #' Interpolate Coefficient Vectors Along a Lambda Sequence
 #'
 #' Given a decreasing lambda sequence from a fitted path and a new set of lambda
