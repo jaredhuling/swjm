@@ -15,6 +15,7 @@ Description: Implements stagewise regression for variable selection in joint
     joint scale-change model (AFT-type). Provides cooperative lasso, lasso, and
     group lasso penalties with cross-validation for tuning parameter selection
     via cross-fitted estimating equations.
+Depends: R (>= 3.5.0)
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
