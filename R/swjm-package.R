@@ -38,7 +38,7 @@
 #' @useDynLib swjm, .registration = TRUE
 #' @importFrom Rcpp sourceCpp
 #' @importFrom Matrix Diagonal
-#' @importFrom stats approx aggregate coef predict sd
+#' @importFrom stats approx aggregate coef predict sd model.matrix reformulate
 #'   rgamma rnorm rexp rpois runif rweibull
 #' @importFrom graphics par matplot lines abline legend text axis mtext barplot
 #' @importFrom grDevices adjustcolor
