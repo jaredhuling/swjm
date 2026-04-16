@@ -2,11 +2,11 @@ Package: swjm
 Title: Stagewise Variable Selection for Joint Models of Semi-Competing Risks
 Version: 0.1.0
 Authors@R: c(
-    person("Huo", "Lingfeng", role = c("aut", "cre"),
-           email = "huol@example.com"),
+    person("Huling", "Jared D.", role = c("aut", "cre"),
+    email = "jaredhuling@gmail.com"),
+    person("Huo", "Lingfeng", role = c("aut")),
     person("Jiang", "Ziren", role = "aut"),
     person("Hou", "Jue", role = "aut"),
-    person("Huling", "Jared D.", role = "aut"),
     person(given = "Sy Han (Steven)", family = "Chiou", role = "ctb"),
     person(given = "Chiung-Yu", family = "Huang", role = "ctb"))
 Description: Implements stagewise regression for variable selection in joint
