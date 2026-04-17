@@ -55,15 +55,15 @@ columns:
 
 ## Author
 
-**Maintainer**: Huo Lingfeng <huol@example.com>
+**Maintainer**: Jared D. Huling <jaredhuling@gmail.com>
 
 Authors:
 
-- Jiang Ziren
+- Lingfeng Huo
 
-- Hou Jue
+- Ziren Jiang
 
-- Huling Jared D.
+- Jue Hou
 
 Other contributors:
 
