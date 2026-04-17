@@ -42,13 +42,13 @@ All functions expect a recurrent-event data frame with the following columns:
 }
 
 \author{
-\strong{Maintainer}: Huo Lingfeng \email{huol@example.com}
+\strong{Maintainer}: Jared D. Huling \email{jaredhuling@gmail.com}
 
 Authors:
 \itemize{
-  \item Jiang Ziren
-  \item Hou Jue
-  \item Huling Jared D.
+  \item Lingfeng Huo
+  \item Ziren Jiang
+  \item Jue Hou
 }
 
 Other contributors:
