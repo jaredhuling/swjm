@@ -1,6 +1,6 @@
-## First upload for 'swjm' -- 0.1.0
+## First upload for 'swjm' -- 0.1.1
 
-* New package upload
+* Fix for R_NamespaceRegistry error
 
 
 ## Test environments

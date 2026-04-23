@@ -1,6 +1,6 @@
 Package: swjm
 Title: Stagewise Variable Selection for Joint Models of Semi-Competing Risks
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: c(
     person(family="Huling", given="Jared D.", role = c("aut", "cre"),
     email = "jaredhuling@gmail.com"),
@@ -21,10 +21,10 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 LinkingTo:
-    Rcpp,
+    Rcpp (>= 1.0.14),
     RcppArmadillo
 Imports:
-    Rcpp,
+    Rcpp (>= 1.0.14),
     Matrix,
     stats,
     reReg
