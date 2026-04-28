@@ -59,7 +59,7 @@
 cv_stagewise <- function(data, model = c("jfm", "jscm"),
                          penalty = c("coop", "lasso", "group"),
                          K = 5L, lambda_seq = NULL,
-                         eps = NULL, max_iter = NULL, pp = NULL,
+                         eps = NULL, max_iter = NULL, pp = NULL, adap = 0,
                          estimate_frailty = FALSE,
                          ncores = 1L,
                          standardize = TRUE) {
@@ -114,13 +114,13 @@ cv_stagewise <- function(data, model = c("jfm", "jscm"),
   # CV fold fits + cross-fitted EE on standardized data
   if (model == "jfm") {
     result <- cv_jfm(data_std, penalty, lambda_seq, K, initial_alpha,
-                     initial_beta, eps1 = 1e-6, adap = 1L, eps2 = eps,
+                     initial_beta, eps1 = 1e-6, adap = adap, eps2 = eps,
                      iter = max_iter, pp = pp,
                      estimate_frailty = estimate_frailty,
                      ncores = ncores)
   } else {
     result <- cv_jscm(data_std, penalty, lambda_seq, K, initial_alpha,
-                      initial_beta, eps1 = 1e-6, adap = 1L, eps2 = eps,
+                      initial_beta, eps1 = 1e-6, adap = adap, eps2 = eps,
                       iter = max_iter, pp = pp,
                       ncores = ncores)
   }

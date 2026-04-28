@@ -111,8 +111,8 @@ generate_data_jfm <- function(n, p, scenario = 1, b = 6.50,
 
   # Helper: indices for the k-th 10% block (1-indexed), safe for any p >= 1
   .blk <- function(k) {
-    lo <- floor(p * (k - 1) / 10) + 1L
-    hi <- floor(p * k / 10)
+    lo <- floor(k - 1) + 1L
+    hi <- floor(k)
     if (hi >= lo) lo:hi else integer(0)
   }
 
