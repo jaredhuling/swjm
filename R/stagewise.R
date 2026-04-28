@@ -55,7 +55,7 @@
 #' @export
 stagewise_fit <- function(data, model = c("jfm", "jscm"),
                           penalty = c("coop", "lasso", "group"),
-                          eps = NULL, max_iter = NULL, pp = NULL,
+                          eps = NULL, adap = 0, max_iter = NULL, pp = NULL,
                           estimate_frailty = FALSE,
                           standardize = TRUE) {
   model <- match.arg(model)
@@ -95,7 +95,7 @@ stagewise_fit <- function(data, model = c("jfm", "jscm"),
     if (is.null(max_iter)) max_iter <- 5000L
     if (is.null(pp)) pp <- max_iter   # disable early stopping by default for JFM
     result <- stagewise_jfm(initial_alpha, initial_beta, data_fit, penalty,
-                            eps1 = 1e-6, adap = 1L, eps2 = eps,
+                            eps1 = 1e-6, adap = adap, eps2 = eps,
                             iter = max_iter, pp = pp,
                             estimate_frailty = estimate_frailty)
   } else {
@@ -103,7 +103,7 @@ stagewise_fit <- function(data, model = c("jfm", "jscm"),
     if (is.null(max_iter)) max_iter <- 5000L
     if (is.null(pp)) pp <- max_iter   # disable early stopping by default for JSCM
     result <- stagewise_jscm(initial_alpha, initial_beta, data_fit, penalty,
-                             eps1 = 1e-6, adap = 1L, eps2 = eps,
+                             eps1 = 1e-6, adap = adap, eps2 = eps,
                              iter = max_iter, pp = pp)
   }
 
@@ -411,7 +411,7 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
     # in the last pp iterations (truly stuck), not merely if two variables
     # alternate.
     if (k %% pp == 0) {
-      if (length(unique(AA)) <= 1L) break
+      if (length(unique(AA)) <= 2L) break
       AA <- integer(0)
     }
   }
@@ -562,7 +562,7 @@ stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
     # in the last pp iterations (truly stuck), not merely if two variables
     # alternate.
     if (k %% pp == 0) {
-      if (length(unique(AA)) <= 1L) break
+      if (length(unique(AA)) <= 2L) break
       AA <- integer(0)
     }
   }
