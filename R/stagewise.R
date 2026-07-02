@@ -25,19 +25,6 @@
 #'   the frailty variance and uses the Kalbfleisch et al. (2013) frailty
 #'   weights \eqn{w_i(t)} in the estimating equations. If \code{FALSE}
 #'   (default), uses unit weights (simplified model without frailty).
-#' @param direction Character. \code{"corrected-fixed"} (default, recommended)
-#'   uses the exact dual-norm argmax update directions under the scaled
-#'   penalties (which carry a factor 1/xi on the death-model coordinates) with
-#'   the gradient-rescaling factor xi frozen at its initial value, so the
-#'   algorithm emulates a single fixed scaled penalty and the solution path is
-#'   well behaved. \code{"corrected"} uses the exact directions with xi
-#'   recalibrated every iteration; the recalibration feeds overshoot back into
-#'   the step sizes and can make the path erratic. \code{"legacy"} reproduces
-#'   the historical behavior (unit-norm directions in rescaled gradient
-#'   coordinates), which under-steps the death block; provided for reproducing
-#'   results computed before the correction. \code{"corrected-capped"} caps
-#'   the step magnitude at one and is retained for comparison only (it starves
-#'   the recurrent-event block and is not recommended).
 #' @param standardize Logical. If \code{TRUE} (default), covariates are
 #'   divided by their standard deviations before fitting and coefficients
 #'   are rescaled back to the original scale. For the JFM with time-varying
@@ -70,11 +57,9 @@ stagewise_fit <- function(data, model = c("jfm", "jscm"),
                           penalty = c("coop", "lasso", "group"),
                           eps = NULL, max_iter = NULL, pp = NULL,
                           estimate_frailty = FALSE,
-                          standardize = TRUE,
-                          direction = c("corrected-fixed", "corrected", "legacy", "corrected-capped")) {
+                          standardize = TRUE) {
   model <- match.arg(model)
   penalty <- match.arg(penalty)
-  direction <- match.arg(direction)
 
   data <- prepare_data(data, caller = "stagewise_fit")
   validate_data(data, caller = "stagewise_fit")
@@ -112,16 +97,14 @@ stagewise_fit <- function(data, model = c("jfm", "jscm"),
     result <- stagewise_jfm(initial_alpha, initial_beta, data_fit, penalty,
                             eps1 = 1e-6, adap = 1L, eps2 = eps,
                             iter = max_iter, pp = pp,
-                            estimate_frailty = estimate_frailty,
-                            direction = direction)
+                            estimate_frailty = estimate_frailty)
   } else {
     if (is.null(eps)) eps <- 0.01
     if (is.null(max_iter)) max_iter <- 5000L
     if (is.null(pp)) pp <- max_iter   # disable early stopping by default for JSCM
     result <- stagewise_jscm(initial_alpha, initial_beta, data_fit, penalty,
                              eps1 = 1e-6, adap = 1L, eps2 = eps,
-                             iter = max_iter, pp = pp,
-                             direction = direction)
+                             iter = max_iter, pp = pp)
   }
 
   # Rescale coefficients back to original covariate scale:
@@ -255,8 +238,7 @@ summary.swjm_path <- function(object, ...) {
 #' @keywords internal
 stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
                           eps1, adap, eps2, iter, pp = 200L,
-                          estimate_frailty = FALSE,
-                          direction = "corrected") {
+                          estimate_frailty = FALSE) {
   p <- length(initial_alpha)
   dc <- extract_data_components(Data2)
   Z <- dc$Z; n <- dc$n; td <- dc$td; td.id <- dc$td.id; d_td <- dc$d_td
@@ -378,7 +360,7 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
     thetak <- thetaK
 
     # Compute dual norm and update direction
-    step_info <- .compute_step(g1, g2, p, penalty, adap, eps2, cc, direction)
+    step_info <- .compute_step(g1, g2, p, penalty, adap, eps2, cc)
     delta <- step_info$delta
     i0 <- step_info$i0
     eps2_use <- step_info$eps2
@@ -409,15 +391,10 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
     g1 <- (-1) * as.numeric(ee$res_re$score)
     g2 <- (-1) * as.numeric(ee$res_de$score)
 
-    # Gradient scaling: scale death (g2) up ("corrected-fixed" freezes the
-    # initial cc so the emulated penalty, and hence the path geometry, is fixed)
-    if (!identical(direction, "corrected-fixed")) {
-      if (penalty %in% c("coop", "group")) {
-        cc <- max(abs(g1)) / max(abs(g2))
-      } else {
-        cc <- sqrt(sum(g1^2)) / sqrt(sum(g2^2))
-      }
-    }
+    # Rescale the death gradient with cc FROZEN at its initial value, so the
+    # algorithm emulates a single fixed scaled penalty (recalibrating cc every
+    # iteration would feed overshoot back into the amplified steps and
+    # destabilize the path)
     g2_origin <- g2
     g2 <- cc * g2
 
@@ -438,7 +415,7 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
   }
 
   # Final lambda
-  final_info <- .compute_step(g1, g2, p, penalty, adap, eps2, cc, direction)
+  final_info <- .compute_step(g1, g2, p, penalty, adap, eps2, cc)
   lambda_vec[k + 1] <- final_info$lambda_val
 
   # Trim storage
@@ -462,8 +439,7 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
 
 #' @keywords internal
 stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
-                           eps1, adap, eps2, iter, pp = 2000L,
-                           direction = "corrected") {
+                           eps1, adap, eps2, iter, pp = 2000L) {
   p <- length(initial_alpha)
   n <- length(unique(Data2$id))
 
@@ -540,7 +516,7 @@ stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
     thetak <- thetaK
 
     # Compute dual norm and update direction
-    step_info <- .compute_step(g1, g2, p, penalty, adap, eps2, cc, direction)
+    step_info <- .compute_step(g1, g2, p, penalty, adap, eps2, cc)
     delta <- step_info$delta
     i0 <- step_info$i0
     eps2_use <- step_info$eps2
@@ -564,15 +540,10 @@ stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
     g1 <- .jscm_g1(alpha)
     g2 <- .jscm_g2(alpha, beta)
 
-    # Gradient scaling: scale death (g2) up ("corrected-fixed" freezes the
-    # initial cc so the emulated penalty, and hence the path geometry, is fixed)
-    if (!identical(direction, "corrected-fixed")) {
-      if (penalty %in% c("coop", "group")) {
-        cc <- max(abs(g1)) / max(abs(g2))
-      } else {
-        cc <- sqrt(sum(g1^2)) / sqrt(sum(g2^2))
-      }
-    }
+    # Rescale the death gradient with cc FROZEN at its initial value, so the
+    # algorithm emulates a single fixed scaled penalty (recalibrating cc every
+    # iteration would feed overshoot back into the amplified steps and
+    # destabilize the path)
     g2_origin <- g2
     g2 <- cc * g2
 
@@ -593,7 +564,7 @@ stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
   }
 
   # Final lambda
-  final_info <- .compute_step(g1, g2, p, penalty, adap, eps2, cc, direction)
+  final_info <- .compute_step(g1, g2, p, penalty, adap, eps2, cc)
   lambda_vec[k + 1] <- final_info$lambda_val
 
   # Trim storage
@@ -619,16 +590,13 @@ stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
 #'
 #' g1 and g2 are the (loss-convention) gradients with g2 already rescaled by
 #' cc = 1/xi, so coordinate selection and the dual-norm value are computed on
-#' the rescaled pair. Under the scaled penalties, the argmax direction carries
-#' an additional factor 1/xi = cc on every death (second-block) coordinate:
-#' scaled lasso and cooperative mixed-sign give e_{j*} sgn(g)/xi when a death
-#' coordinate wins, and the group / cooperative same-sign L2 direction is
-#' (g_a, g_b/xi^2)/||(g_a, g_b/xi)||_2, i.e. cc times the rescaled component.
-#' direction = "corrected" applies that factor; "legacy" reproduces the
-#' historical behavior (unit-norm direction in rescaled coordinates), which
-#' under-steps the death block by the factor cc.
-.compute_step <- function(g1, g2, p, penalty, adap, eps2, cc = 1,
-                          direction = "corrected") {
+#' the rescaled pair. Under the scaled penalties, the exact argmax direction
+#' carries an additional factor 1/xi = cc on every death (second-block)
+#' coordinate: the scaled lasso and the mixed-sign cooperative branch give
+#' e_{j*} sgn(g)/xi when a death coordinate wins, and the group / same-sign
+#' cooperative L2 direction is (g_a, g_b/xi^2)/||(g_a, g_b/xi)||_2, i.e. cc
+#' times the rescaled component. The amplification is applied at the end.
+.compute_step <- function(g1, g2, p, penalty, adap, eps2, cc = 1) {
   delta <- numeric(2 * p)
   i0 <- 1L
   lambda_val <- 0
@@ -689,16 +657,8 @@ stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
     }
   }
 
-  if (direction %in% c("corrected", "corrected-capped", "corrected-fixed") && cc != 1) {
+  if (cc != 1) {
     delta[(p + 1):(2 * p)] <- cc * delta[(p + 1):(2 * p)]
-  }
-  if (identical(direction, "corrected-capped")) {
-    # keep the exact argmax ANGLE but cap the step magnitude at one in
-    # coefficient space, restoring the small-step regime that a fixed eps
-    # assumes (the raw argmax has coefficient-space magnitude up to
-    # max(1, cc), which destabilizes the path when cc >> 1)
-    dn <- sqrt(sum(delta^2))
-    if (dn > 1) delta <- delta / dn
   }
 
   list(delta = delta, i0 = i0, eps2 = eps2_use, lambda_val = lambda_val)
