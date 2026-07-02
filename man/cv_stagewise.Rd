@@ -15,7 +15,8 @@ cv_stagewise(
   pp = NULL,
   estimate_frailty = FALSE,
   ncores = 1L,
-  standardize = TRUE
+  standardize = TRUE,
+  direction = c("corrected-fixed", "corrected", "legacy", "corrected-capped")
 )
 }
 \arguments{
@@ -48,6 +49,12 @@ PSOCK cluster, which works on all platforms including Windows.}
 
 \item{standardize}{Logical. If \code{TRUE} (default), covariates are
 standardized before fitting (passed to \code{stagewise_fit}).}
+
+\item{direction}{Character. Update-direction variant; see
+\code{\link{stagewise_fit}}. \code{"corrected-fixed"} (default,
+recommended) uses the exact argmax directions with the rescaling factor
+frozen at initialization; \code{"legacy"} reproduces the pre-correction
+behavior.}
 }
 \value{
 An object of class \code{"swjm_cv"}, a list with components:

@@ -25,6 +25,11 @@
 #' @param ncores Integer. Number of cores for parallel fold training
 #'   (default 1, sequential). Uses \code{parallel::parLapply} with a
 #'   PSOCK cluster, which works on all platforms including Windows.
+#' @param direction Character. Update-direction variant; see
+#'   \code{\link{stagewise_fit}}. \code{"corrected-fixed"} (default,
+#'   recommended) uses the exact argmax directions with the rescaling factor
+#'   frozen at initialization; \code{"legacy"} reproduces the pre-correction
+#'   behavior.
 #' @param standardize Logical. If \code{TRUE} (default), covariates are
 #'   standardized before fitting (passed to \code{stagewise_fit}).
 #'
@@ -62,9 +67,11 @@ cv_stagewise <- function(data, model = c("jfm", "jscm"),
                          eps = NULL, max_iter = NULL, pp = NULL,
                          estimate_frailty = FALSE,
                          ncores = 1L,
-                         standardize = TRUE) {
+                         standardize = TRUE,
+                         direction = c("corrected-fixed", "corrected", "legacy", "corrected-capped")) {
   model <- match.arg(model)
   penalty <- match.arg(penalty)
+  direction <- match.arg(direction)
   data <- prepare_data(data, caller = "cv_stagewise")
   validate_data(data, caller = "cv_stagewise")
 
@@ -103,7 +110,8 @@ cv_stagewise <- function(data, model = c("jfm", "jscm"),
   full_fit <- stagewise_fit(data_std, model = model, penalty = penalty,
                             eps = eps, max_iter = max_iter, pp = pp,
                             estimate_frailty = estimate_frailty,
-                            standardize = FALSE)
+                            standardize = FALSE,
+                            direction = direction)
 
   if (is.null(lambda_seq)) {
     lambda_seq <- full_fit$lambda
@@ -117,12 +125,12 @@ cv_stagewise <- function(data, model = c("jfm", "jscm"),
                      initial_beta, eps1 = 1e-6, adap = 1L, eps2 = eps,
                      iter = max_iter, pp = pp,
                      estimate_frailty = estimate_frailty,
-                     ncores = ncores)
+                     ncores = ncores, direction = direction)
   } else {
     result <- cv_jscm(data_std, penalty, lambda_seq, K, initial_alpha,
                       initial_beta, eps1 = 1e-6, adap = 1L, eps2 = eps,
                       iter = max_iter, pp = pp,
-                      ncores = ncores)
+                      ncores = ncores, direction = direction)
   }
 
   # --- Derived quantities from the full-data path ---
@@ -295,7 +303,8 @@ summary.swjm_cv <- function(object, ...) {
 #' @keywords internal
 cv_jfm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
                    initial_beta, eps1, adap, eps2, iter, pp,
-                   estimate_frailty = FALSE, ncores = 1L) {
+                   estimate_frailty = FALSE, ncores = 1L,
+                   direction = "corrected") {
   p <- ncol(Data2) - 5L
   n1 <- length(unique(Data2$id))
 
@@ -319,7 +328,8 @@ cv_jfm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
 
     results_tr <- stagewise_jfm(initial_alpha, initial_beta, Data2_tr,
                                 penalty, eps1, adap, eps2, iter, pp,
-                                estimate_frailty = estimate_frailty)
+                                estimate_frailty = estimate_frailty,
+                                direction = direction)
 
     lambda_seq_tr <- results_tr$lambda
     theta_tr <- results_tr$theta_update
@@ -436,7 +446,7 @@ cv_jfm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
 #' @keywords internal
 cv_jscm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
                     initial_beta, eps1, adap, eps2, iter, pp,
-                    ncores = 1L) {
+                    ncores = 1L, direction = "corrected") {
   p <- ncol(Data2) - 5L
   n1 <- length(unique(Data2$id))
 
@@ -463,7 +473,8 @@ cv_jscm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
     Data2_tr$id <- match(Data2_tr$id, unique(Data2_tr$id))
 
     results_tr <- stagewise_jscm(initial_alpha, initial_beta, Data2_tr,
-                                 penalty, eps1, adap, eps2, iter, pp)
+                                 penalty, eps1, adap, eps2, iter, pp,
+                                 direction = direction)
     lambda_seq_tr <- results_tr$lambda
     theta_tr <- results_tr$theta_update
     dec_idx <- extract_decreasing_indices(lambda_seq_tr)
