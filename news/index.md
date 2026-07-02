@@ -1,6 +1,6 @@
 # Changelog
 
-## swjm 0.2.0
+## swjm 0.1.2
 
 - Corrected the stagewise update directions under the scaled penalties.
   The argmax of the update objective over the scaled-penalty unit ball
