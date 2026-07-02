@@ -56,8 +56,7 @@ Model (JSCM).</p>
 <span>  max_iter <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  pp <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  estimate_frailty <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  standardize <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  direction <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"corrected-fixed"</span>, <span class="st">"corrected"</span>, <span class="st">"legacy"</span>, <span class="st">"corrected-capped"</span><span class="op">)</span></span>
+<span>  standardize <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -108,22 +107,6 @@ are rescaled back to the original scale. For the JFM with time-varying
 covariates, the SD is computed across all rows (all time points and
 subjects). For the JSCM with time-invariant covariates, the SD is
 computed across subjects only.</p></dd>
-
-
-<dt id="arg-direction">direction<a class="anchor" aria-label="anchor" href="#arg-direction"></a></dt>
-<dd><p>Character. <code>"corrected-fixed"</code> (default, recommended)
-uses the exact dual-norm argmax update directions under the scaled
-penalties (which carry a factor 1/xi on the death-model coordinates) with
-the gradient-rescaling factor xi frozen at its initial value, so the
-algorithm emulates a single fixed scaled penalty and the solution path is
-well behaved. <code>"corrected"</code> uses the exact directions with xi
-recalibrated every iteration; the recalibration feeds overshoot back into
-the step sizes and can make the path erratic. <code>"legacy"</code> reproduces
-the historical behavior (unit-norm directions in rescaled gradient
-coordinates), which under-steps the death block; provided for reproducing
-results computed before the correction. <code>"corrected-capped"</code> caps
-the step magnitude at one and is retained for comparison only (it starves
-the recurrent-event block and is not recommended).</p></dd>
 
 </dl></div>
     <div class="section level2">

@@ -34,8 +34,9 @@
 
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.2" id="swjm-012">swjm 0.1.2<a class="anchor" aria-label="anchor" href="#swjm-012"></a></h2>
-<ul><li>Corrected the stagewise update directions under the scaled penalties. The argmax of the update objective over the scaled-penalty unit ball carries a factor 1/xi on every death-model coordinate (scaled lasso and mixed-sign cooperative branches: e_j sgn(g)/xi; group and same-sign cooperative branches: (g_a, g_b/xi^2)/||(g_a, g_b/xi)||_2). The previous implementation used unit-norm directions in rescaled gradient coordinates, which under-stepped the death-model block by the rescaling factor at every iteration and systematically over-shrank death-model coefficients.</li>
-<li>New <code>direction</code> argument for <code><a href="../reference/stagewise_fit.html">stagewise_fit()</a></code> and <code><a href="../reference/cv_stagewise.html">cv_stagewise()</a></code> with variants <code>"corrected-fixed"</code> (default, recommended: exact directions with the rescaling factor frozen at initialization, giving well-behaved paths), <code>"corrected"</code> (exact directions with per-iteration recalibration), <code>"legacy"</code> (pre-correction behavior, for reproducibility), and <code>"corrected-capped"</code> (comparison only).</li>
+<ul><li>Corrected the stagewise update directions under the scaled penalties. The argmax of the update objective over the scaled-penalty unit ball carries a factor 1/xi on every death-model coordinate (scaled lasso and mixed-sign cooperative branches: e_j sgn(g)/xi; group and same-sign cooperative branches: (g_a, g_b/xi^2)/||(g_a, g_b/xi)||_2). Earlier versions used unit-norm directions in rescaled gradient coordinates, which under-stepped the death-model block by the rescaling factor at every iteration and systematically over-shrank death-model coefficients.</li>
+<li>The gradient-rescaling factor is now frozen at its initial value, so each fit emulates a single fixed scaled penalty and the solution paths are well behaved.</li>
+<li>Results computed with earlier versions of the package will differ, particularly death-model coefficient estimates and selection summaries.</li>
 </ul></div>
   </main></div>
 

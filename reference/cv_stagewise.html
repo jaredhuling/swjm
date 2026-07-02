@@ -53,8 +53,7 @@ using K-fold cross-validation with cross-fitted estimating equations.</p>
 <span>  pp <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  estimate_frailty <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  ncores <span class="op">=</span> <span class="fl">1L</span>,</span>
-<span>  standardize <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  direction <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"corrected-fixed"</span>, <span class="st">"corrected"</span>, <span class="st">"legacy"</span>, <span class="st">"corrected-capped"</span><span class="op">)</span></span>
+<span>  standardize <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -112,14 +111,6 @@ PSOCK cluster, which works on all platforms including Windows.</p></dd>
 <dt id="arg-standardize">standardize<a class="anchor" aria-label="anchor" href="#arg-standardize"></a></dt>
 <dd><p>Logical. If <code>TRUE</code> (default), covariates are
 standardized before fitting (passed to <code>stagewise_fit</code>).</p></dd>
-
-
-<dt id="arg-direction">direction<a class="anchor" aria-label="anchor" href="#arg-direction"></a></dt>
-<dd><p>Character. Update-direction variant; see
-<code><a href="stagewise_fit.html">stagewise_fit</a></code>. <code>"corrected-fixed"</code> (default,
-recommended) uses the exact argmax directions with the rescaling factor
-frozen at initialization; <code>"legacy"</code> reproduces the pre-correction
-behavior.</p></dd>
 
 </dl></div>
     <div class="section level2">

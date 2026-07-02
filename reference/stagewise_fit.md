@@ -16,8 +16,7 @@ stagewise_fit(
   max_iter = NULL,
   pp = NULL,
   estimate_frailty = FALSE,
-  standardize = TRUE,
-  direction = c("corrected-fixed", "corrected", "legacy", "corrected-capped")
+  standardize = TRUE
 )
 ```
 
@@ -66,23 +65,6 @@ stagewise_fit(
   computed across all rows (all time points and subjects). For the JSCM
   with time-invariant covariates, the SD is computed across subjects
   only.
-
-- direction:
-
-  Character. `"corrected-fixed"` (default, recommended) uses the exact
-  dual-norm argmax update directions under the scaled penalties (which
-  carry a factor 1/xi on the death-model coordinates) with the
-  gradient-rescaling factor xi frozen at its initial value, so the
-  algorithm emulates a single fixed scaled penalty and the solution path
-  is well behaved. `"corrected"` uses the exact directions with xi
-  recalibrated every iteration; the recalibration feeds overshoot back
-  into the step sizes and can make the path erratic. `"legacy"`
-  reproduces the historical behavior (unit-norm directions in rescaled
-  gradient coordinates), which under-steps the death block; provided for
-  reproducing results computed before the correction.
-  `"corrected-capped"` caps the step magnitude at one and is retained
-  for comparison only (it starves the recurrent-event block and is not
-  recommended).
 
 ## Value
 
