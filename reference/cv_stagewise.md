@@ -17,7 +17,8 @@ cv_stagewise(
   pp = NULL,
   estimate_frailty = FALSE,
   ncores = 1L,
-  standardize = TRUE
+  standardize = TRUE,
+  direction = c("corrected-fixed", "corrected", "legacy", "corrected-capped")
 )
 ```
 
@@ -74,6 +75,14 @@ cv_stagewise(
 
   Logical. If `TRUE` (default), covariates are standardized before
   fitting (passed to `stagewise_fit`).
+
+- direction:
+
+  Character. Update-direction variant; see
+  [`stagewise_fit`](http://jaredhuling.org/swjm/reference/stagewise_fit.md).
+  `"corrected-fixed"` (default, recommended) uses the exact argmax
+  directions with the rescaling factor frozen at initialization;
+  `"legacy"` reproduces the pre-correction behavior.
 
 ## Value
 
@@ -133,9 +142,9 @@ cv_res
 #> 
 #>   Covariates (p):              10
 #>   Lambda grid size:            101
-#>   Best position (combined):    101  (lambda = 1.068)
-#>   Selected variables:          3 readmission, 3 death
-#>     Readmission (alpha): 2, 9, 10
-#>     Death (beta):        2, 9, 10
+#>   Best position (combined):    101  (lambda = 1.045)
+#>   Selected variables:          4 readmission, 5 death
+#>     Readmission (alpha): 2, 4, 9, 10
+#>     Death (beta):        2, 3, 4, 9, 10
 # }
 ```

@@ -46,6 +46,7 @@ vectors.
 ## Installation
 
 ``` r
+
 # From the package directory:
 devtools::install("swjm")
 ```
@@ -64,6 +65,7 @@ All functions expect a data frame with columns `id`, `t.start`,
 ### 1. Simulate data
 
 ``` r
+
 library(swjm)
 
 # Joint Frailty Model — scenario 1
@@ -91,6 +93,7 @@ JFM data: n = 200 subjects, 382 readmission events, 48 deaths
 ### 2. Fit the stagewise regularization path
 
 ``` r
+
 fit_jfm <- stagewise_fit(Data_jfm, model = "jfm", penalty = "coop")
 fit_jfm
 #> Stagewise path (jfm/coop)
@@ -108,6 +111,7 @@ separate *p* × (*k*+1) matrices — one column per stagewise step — in
 addition to the combined `theta` matrix (2*p* × (*k*+1)):
 
 ``` r
+
 p <- 100
 k_final <- ncol(fit_jfm$alpha)
 a_final <- round(fit_jfm$alpha[, k_final], 4)
@@ -119,6 +123,7 @@ a_final <- round(fit_jfm$alpha[, k_final], 4)
 Nonzero alpha entries at final step:
 
 ``` r
+
 a_final[a_final != 0]
 #>  [1]  1.0057 -0.9787  0.0183 -0.0577  0.0185  0.0151  0.9614 -0.8484  0.0124
 #> [10]  0.0423 -0.0284  0.0199 -0.0020  0.0240 -0.0240  0.0064  0.0781 -0.0061
@@ -132,6 +137,7 @@ of path-end coefficients with variable type (shared, readmission-only,
 or death-only):
 
 ``` r
+
 summary(fit_jfm)
 #> Stagewise path (jfm/coop)
 #> 
@@ -200,6 +206,7 @@ glmnet-style coefficient trajectory plot with the number of active
 variables on the top axis:
 
 ``` r
+
 plot(fit_jfm)
 ```
 
@@ -212,6 +219,7 @@ evaluates a cross-fitted estimating-equation score norm over a grid of
 lambda values.
 
 ``` r
+
 lambda_path <- fit_jfm$lambda
 dec_idx     <- swjm:::extract_decreasing_indices(lambda_path)
 lambda_seq  <- lambda_path[dec_idx]
@@ -238,6 +246,7 @@ across the full lambda grid.
 ### 5. Plot the cross-validation results
 
 ``` r
+
 plot(cv_jfm)
 ```
 
@@ -246,6 +255,7 @@ plot(cv_jfm)
 ### 6. Summarize the chosen model
 
 ``` r
+
 # summary() shows a formatted table of selected coefficients
 summary(cv_jfm)
 #> CV-selected model (jfm/coop)
@@ -271,6 +281,7 @@ summary(cv_jfm)
 Direct access to selected coefficients:
 
 ``` r
+
 # coef() returns the combined numeric vector c(alpha, beta) for compatibility
 theta_best <- coef(cv_jfm)
 ```
@@ -285,6 +296,7 @@ evaluates the cumulative baseline hazards at any desired time points
 (Breslow for JFM; Nelson-Aalen on the accelerated scale for JSCM):
 
 ``` r
+
 bh <- baseline_hazard(cv_jfm, times = c(0.5, 1.0, 2.0, 4.0, 6.0))
 print(bh)
 #>   time cumhaz_readmission cumhaz_death
@@ -302,6 +314,7 @@ subject-specific readmission-free and death-free survival curves,
 together with the per-predictor contributions to each linear predictor:
 
 ``` r
+
 # Three hypothetical new subjects (covariate vectors of length p = 100)
 set.seed(7)
 newz <- matrix(rnorm(300), nrow = 3, ncol = 100)
@@ -343,6 +356,7 @@ contrib1[contrib1 != 0]
 predictor contributions for the selected subject.
 
 ``` r
+
 plot(pred, which_subject = 1)
 ```
 
@@ -357,11 +371,12 @@ The same workflow applies to the JSCM.
 and [`predict()`](https://rdrr.io/r/stats/predict.html) now work for
 both models: for JSCM, survival curves are estimated via a Nelson-Aalen
 baseline on the accelerated time scale. In the AFT interpretation,
-$e^{{\widehat{\alpha}}^{\top}z_{i}}$ is the time-acceleration factor for
-subject $i$: greater than 1 means events happen sooner, less than 1
-means later.
+$`e^{\hat\alpha^\top z_i}`$ is the time-acceleration factor for subject
+$`i`$: greater than 1 means events happen sooner, less than 1 means
+later.
 
 ``` r
+
 fit_jscm <- stagewise_fit(Data_jscm, model = "jscm", penalty = "coop")
 
 lambda_path_jscm <- fit_jscm$lambda
@@ -387,6 +402,7 @@ summary(cv_jscm)
 ```
 
 ``` r
+
 set.seed(7)
 newz_jscm <- matrix(runif(600, -1, 1), nrow = 3, ncol = 100)
 #> Warning in matrix(runif(600, -1, 1), nrow = 3, ncol = 100): data length differs
@@ -398,6 +414,7 @@ pred_jscm <- predict(cv_jscm, newdata = newz_jscm)
 Recurrence time-acceleration factors:
 
 ``` r
+
 round(pred_jscm$time_accel_re, 3)
 #> Subject1 Subject2 Subject3 
 #>    1.000    0.983    1.005
@@ -408,6 +425,7 @@ four-panel layout as for JFM: survival curves for both processes plus
 bar charts of log time-acceleration contributions.
 
 ``` r
+
 plot(pred_jscm, which_subject = 1)
 ```
 
@@ -418,6 +436,7 @@ plot(pred_jscm, which_subject = 1)
 ### 11. Other penalties
 
 ``` r
+
 fit_lasso <- stagewise_fit(Data_jfm, model = "jfm", penalty = "lasso")
 cv_lasso  <- cv_stagewise(Data_jfm, model = "jfm", penalty = "lasso", K = 3L)
 summary(cv_lasso)
@@ -438,6 +457,7 @@ Variables that are truly nonzero or were selected are shown; all others
 were correctly excluded.
 
 ``` r
+
 p <- 100
 
 # JFM: variables of interest (true signal or selected)
@@ -467,6 +487,7 @@ print(coef_df, row.names = FALSE)
 JFM alpha: TP=6 FP=2 FN=0 \| beta: TP=4 FP=2 FN=2
 
 ``` r
+
 show_jscm <- sort(which(dat_jscm$alpha_true != 0 | cv_jscm$alpha != 0 |
                         dat_jscm$beta_true  != 0 | cv_jscm$beta  != 0))
 
@@ -496,13 +517,14 @@ We use the `timeROC` package (Blanche et al., 2013) to compute
 cause-specific time-varying AUC in the competing-risk framework. Each
 subject contributes at most a first-readmission event (cause 1) and a
 death event (cause 2). Each sub-model is assessed with its own linear
-predictor: ${\widehat{\alpha}}^{\top}z_{i}$ for readmission,
-${\widehat{\beta}}^{\top}z_{i}$ for death.
+predictor: $`\hat\alpha^\top z_i`$ for readmission,
+$`\hat\beta^\top z_i`$ for death.
 
 > **Note**: AUC is evaluated on the training data for illustration. In
 > practice use held-out or cross-validated predictions.
 
 ``` r
+
 # Construct competing-risk dataset:
 # Keep first readmission (event==1 & t.start==0) + death/censor (event==0).
 # Status: 1 = first readmission, 2 = death, 0 = censored.
@@ -529,6 +551,7 @@ M_de_jscm <- drop(Z_jscm %*% cv_jscm$beta)[cr_jscm$data$id]
 ```
 
 ``` r
+
 if (!requireNamespace("timeROC", quietly = TRUE))
   install.packages("timeROC")
 library(survival)
@@ -561,6 +584,7 @@ roc_de_jscm <- timeROC(T = cr_jscm$data$t.stop, delta = cr_jscm$status,
 ```
 
 ``` r
+
 .get_auc <- function(roc, cause) {
   auc <- roc[[paste0("AUC_", cause)]]
   if (is.null(auc)) auc <- roc$AUC
@@ -592,6 +616,7 @@ legend("bottomleft", c("Readmission", "Death"),
 
 ``` r
 
+
 par(old_par)
 ```
 
@@ -616,16 +641,15 @@ par(old_par)
   and returns a `swjm_pred` object with `S_re`, `S_de` (survival
   matrices), linear predictors `lp_re`, `lp_de`, and
   predictor-contribution matrices `contrib_re`, `contrib_de`
-  (${\widehat{\alpha}}_{j}z_{ij}$ and ${\widehat{\beta}}_{j}z_{ij}$).
+  ($`\hat\alpha_j z_{ij}`$ and $`\hat\beta_j z_{ij}`$).
   - **JFM**: contributions are log-hazard-ratio contributions (positive
     = higher risk).
   - **JSCM**: also returns `time_accel_re` and `time_accel_de`
-    ($e^{{\widehat{\alpha}}^{\top}z_{i}}$,
-    $e^{{\widehat{\beta}}^{\top}z_{i}}$) — the multiplicative factors by
-    which each subject’s event times are scaled relative to baseline.
-    Contributions ${\widehat{\alpha}}_{j}z_{ij}$ are log
-    time-acceleration contributions:
-    $e^{{\widehat{\alpha}}_{j}z_{ij}} > 1$ shortens event times; $< 1$
+    ($`e^{\hat\alpha^\top z_i}`$, $`e^{\hat\beta^\top z_i}`$) — the
+    multiplicative factors by which each subject’s event times are
+    scaled relative to baseline. Contributions $`\hat\alpha_j z_{ij}`$
+    are log time-acceleration contributions:
+    $`e^{\hat\alpha_j z_{ij}} > 1`$ shortens event times; $`< 1`$
     lengthens them.
 - The **cooperative lasso** norm penalizes each variable pair
   `(alpha_j, beta_j)` with the L2 norm when signs agree, and L1 when
