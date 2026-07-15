@@ -14,6 +14,3 @@
 - The gradient-rescaling factor is now frozen at its initial value, so
   each fit emulates a single fixed scaled penalty and the solution paths
   are well behaved.
-- Results computed with earlier versions of the package will differ,
-  particularly death-model coefficient estimates and selection
-  summaries.
