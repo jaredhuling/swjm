@@ -1099,8 +1099,6 @@ M_de_jscm <- drop(Z_jscm %*% cv_jscm$beta)[cr_jscm$data$id]
 
 ``` r
 
-if (!requireNamespace("timeROC", quietly = TRUE))
-  install.packages("timeROC")
 library(survival)
 library(timeROC)
 
