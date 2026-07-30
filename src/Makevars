@@ -1,2 +1,7 @@
-PKG_CXXFLAGS = $(SHLIB_OPENMP_CXXFLAGS)
-PKG_LIBS = $(SHLIB_OPENMP_CXXFLAGS) $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
+# No OpenMP: src/EE.cpp contains no `#pragma omp` directives, so the flags
+# bought nothing.  Their only effect was to define _OPENMP, which switches on
+# Armadillo's internal parallelisation of element-wise expressions (threshold
+# 320 elements, capped at 8 threads).  The vectors here are small and the work
+# per expression is tiny, so that spawned parallel regions whose fork/join and
+# spin-wait cost dominated the arithmetic.
+PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)

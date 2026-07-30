@@ -13,6 +13,14 @@ vignette: >
 ---
 
 ```{r setup, include = FALSE}
+# CRAN policy: never use more than two cores.  RcppArmadillo links an OpenMP
+# runtime, whose idle worker threads spin-wait between parallel regions.  On
+# multi-core check machines that inflates CPU time far above elapsed time
+# (triggering the "CPU time N times elapsed time" NOTE) while making the
+# vignette slower in wall-clock terms.  Cap the pool before any compiled code
+# is loaded.
+Sys.setenv(OMP_NUM_THREADS = "1", OMP_THREAD_LIMIT = "2")
+
 knitr::opts_chunk$set(
   collapse  = TRUE,
   comment   = "#>",
@@ -813,6 +821,12 @@ $\hat\beta^\top z_i$ for death.
 > **Note**: AUC is evaluated on the training data for illustration.
 > In practice use held-out or cross-validated predictions.
 
+```{r auc-setup, include = FALSE}
+# timeROC and survival are Suggests; skip this section if unavailable.
+has_roc <- requireNamespace("timeROC", quietly = TRUE) &&
+           requireNamespace("survival", quietly = TRUE)
+```
+
 ```{r auc-prep}
 # Construct competing-risk dataset:
 # Keep first readmission (event==1 & t.start==0) + death/censor (event==0).
@@ -839,9 +853,7 @@ M_re_jscm <- drop(Z_jscm %*% cv_jscm$alpha)[cr_jscm$data$id]
 M_de_jscm <- drop(Z_jscm %*% cv_jscm$beta)[cr_jscm$data$id]
 ```
 
-```{r auc, cache = TRUE}
-if (!requireNamespace("timeROC", quietly = TRUE))
-  install.packages("timeROC")
+```{r auc, eval = has_roc}
 library(survival)
 library(timeROC)
 
@@ -871,7 +883,7 @@ roc_de_jscm <- timeROC(T = cr_jscm$data$t.stop, delta = cr_jscm$status,
                         times = t_jscm, ROC = FALSE, iid = FALSE)
 ```
 
-```{r auc-plot, fig.height = 5, fig.width = 8}
+```{r auc-plot, eval = has_roc, fig.height = 5, fig.width = 8}
 .get_auc <- function(roc, cause) {
   auc <- roc[[paste0("AUC_", cause)]]
   if (is.null(auc)) auc <- roc$AUC
