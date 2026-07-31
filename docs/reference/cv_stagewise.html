@@ -9,7 +9,7 @@ using K-fold cross-validation with cross-fitted estimating equations."></head><b
 
     <a class="navbar-brand me-2" href="../index.html">swjm</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -19,6 +19,7 @@ using K-fold cross-validation with cross-fitted estimating equations."></head><b
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/swjm.html">Get started</a></li>
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
       </ul></div>
@@ -51,7 +52,8 @@ using K-fold cross-validation with cross-fitted estimating equations.</p>
 <span>  max_iter <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  pp <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  estimate_frailty <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  ncores <span class="op">=</span> <span class="fl">1L</span></span>
+<span>  ncores <span class="op">=</span> <span class="fl">1L</span>,</span>
+<span>  standardize <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -105,6 +107,11 @@ the frailty variance and uses frailty weights in the estimating equations
 (default 1, sequential). Uses <code><a href="https://rdrr.io/r/parallel/clusterApply.html" class="external-link">parallel::parLapply</a></code> with a
 PSOCK cluster, which works on all platforms including Windows.</p></dd>
 
+
+<dt id="arg-standardize">standardize<a class="anchor" aria-label="anchor" href="#arg-standardize"></a></dt>
+<dd><p>Logical. If <code>TRUE</code> (default), covariates are
+standardized before fitting (passed to <code>stagewise_fit</code>).</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -157,9 +164,9 @@ terminal score norm.</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Covariates (p):              10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Lambda grid size:            101</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Best position (combined):    101  (lambda = 1.06)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Selected variables:          2 readmission, 2 death</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Readmission (alpha): 9, 10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Best position (combined):    101  (lambda = 1.007)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Selected variables:          3 readmission, 2 death</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Readmission (alpha): 2, 9, 10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>     Death (beta):        9, 10</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
@@ -170,7 +177,7 @@ terminal score norm.</p></dd>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Huo Lingfeng, Jiang Ziren, Hou Jue, Huling Jared D..</p>
+  <p>Developed by Jared D. Huling, Lingfeng Huo, Ziren Jiang, Jue Hou.</p>
 </div>
 
 <div class="pkgdown-footer-right">

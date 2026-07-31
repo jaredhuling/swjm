@@ -13,7 +13,7 @@ Model (JSCM)."></head><body>
 
     <a class="navbar-brand me-2" href="../index.html">swjm</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -23,6 +23,7 @@ Model (JSCM)."></head><body>
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/swjm.html">Get started</a></li>
 <li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
       </ul></div>
@@ -54,7 +55,8 @@ Model (JSCM).</p>
 <span>  eps <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  max_iter <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  pp <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  estimate_frailty <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  estimate_frailty <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  standardize <span class="op">=</span> <span class="cn">TRUE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -97,6 +99,15 @@ the frailty variance and uses the Kalbfleisch et al. (2013) frailty
 weights \(w_i(t)\) in the estimating equations. If <code>FALSE</code>
 (default), uses unit weights (simplified model without frailty).</p></dd>
 
+
+<dt id="arg-standardize">standardize<a class="anchor" aria-label="anchor" href="#arg-standardize"></a></dt>
+<dd><p>Logical. If <code>TRUE</code> (default), covariates are
+divided by their standard deviations before fitting and coefficients
+are rescaled back to the original scale. For the JFM with time-varying
+covariates, the SD is computed across all rows (all time points and
+subjects). For the JSCM with time-invariant covariates, the SD is
+computed across subjects only.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -134,10 +145,10 @@ at each iteration.</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Covariates (p):            10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Iterations:                100</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Lambda range:              [1.377, 1.906]</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Lambda range:              [1.072, 1.933]</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Active at final step:      4 readmission, 4 death</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Readmission (alpha): 3, 4, 9, 10</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Death (beta):        3, 4, 9, 10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Readmission (alpha): 1, 2, 9, 10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Death (beta):        1, 3, 9, 10</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
@@ -147,7 +158,7 @@ at each iteration.</p></dd>
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by Huo Lingfeng, Jiang Ziren, Hou Jue, Huling Jared D..</p>
+  <p>Developed by Jared D. Huling, Lingfeng Huo, Ziren Jiang, Jue Hou.</p>
 </div>
 
 <div class="pkgdown-footer-right">

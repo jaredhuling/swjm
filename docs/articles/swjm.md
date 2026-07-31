@@ -279,10 +279,10 @@ fit_jfm
 #> 
 #>   Covariates (p):            10
 #>   Iterations:                5000
-#>   Lambda range:              [0.03849, 1.442]
-#>   Active at final step:      10 readmission, 10 death
-#>     Readmission (alpha): 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
-#>     Death (beta):        1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+#>   Lambda range:              [1, 1.27]
+#>   Active at final step:      6 readmission, 5 death
+#>     Readmission (alpha): 1, 2, 3, 4, 9, 10
+#>     Death (beta):        1, 3, 4, 9, 10
 ```
 
 The returned `swjm_path` object contains:
@@ -307,15 +307,15 @@ active_final <- which(fit_jfm$alpha[, k] != 0 |
 ```
 
 - Path length: 5001 steps
-- Lambda range: \[0.03849, 1.442\]
-- Active variables at final step: 1 2 3 4 5 6 7 8 9 10
+- Lambda range: \[1, 1.27\]
+- Active variables at final step: 1 2 3 4 9 10
 
 Readmission (alpha) coefficients at the final step:
 
 ``` r
 round(fit_jfm$alpha[, k], 4)
-#>  [1]  1.1049 -1.0964  0.1198 -0.0414  0.0016  0.0003  0.0121  0.0037  0.9539
-#> [10] -0.9847
+#>  [1]  0.2574 -0.2752  0.0073 -0.0003  0.0000  0.0000  0.0000  0.0000  0.0918
+#> [10] -0.1241
 ```
 
 [`summary()`](https://rdrr.io/r/base/summary.html) shows a compact table
@@ -326,23 +326,21 @@ readmission-only, or death-only):
 summary(fit_jfm)
 #> Stagewise path (jfm/coop)
 #> 
-#>   p = 10  |  5000 iterations  |  lambda: [0.03849, 1.442]
-#>   Decreasing path: 604 steps
+#>   p = 10  |  5000 iterations  |  lambda: [1, 1.27]
+#>   Decreasing path: 611 steps
 #> 
 #>   Path-end coefficients (nonzero variables):
 #> 
 #>   Variable    alpha       beta        Type
 #>   ----------  ----------  ----------  ----------------
-#>   x10         -0.9847     -0.9070     shared (+)
-#>   x3          +0.1198     +1.1685     shared (+)
-#>   x9          +0.9539     +0.9246     shared (+)
-#>   x1          +1.1049     +0.2680     shared (+)
-#>   x2          -1.0964     -0.0318     shared (+)
-#>   x4          -0.0414     -1.1720     shared (+)
-#>   x8          +0.0037     +0.0829     shared (+)
-#>   x5          +0.0016     +0.0128     shared (+)
-#>   x7          +0.0121     +0.0120     shared (+)
-#>   x6          +0.0003     -0.0091     shared (–)
+#>   x10         -0.1241     -0.4112     shared (+)
+#>   x3          +0.0073     +0.2329     shared (+)
+#>   x2          -0.2752          —    readmission only
+#>   x9          +0.0918     +0.3950     shared (+)
+#>   x1          +0.2574     +0.1193     shared (+)
+#>   x4          -0.0003     -0.1258     shared (+)
+#> 
+#>   Inactive: x5, x6, x7, x8
 ```
 
 ### 5.3 Plot the Coefficient Path
@@ -382,7 +380,7 @@ dec_idx     <- swjm:::extract_decreasing_indices(lambda_path)
 lambda_seq  <- lambda_path[dec_idx]
 ```
 
-Full path: 5001 steps; decreasing path: 604 steps
+Full path: 5001 steps; decreasing path: 611 steps
 
 ``` r
 set.seed(1)
@@ -677,10 +675,10 @@ fit_jscm
 #> 
 #>   Covariates (p):            10
 #>   Iterations:                5000
-#>   Lambda range:              [0.0007715, 2.501]
-#>   Active at final step:      10 readmission, 10 death
+#>   Lambda range:              [0.1005, 2.143]
+#>   Active at final step:      10 readmission, 9 death
 #>     Readmission (alpha): 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
-#>     Death (beta):        1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+#>     Death (beta):        1, 2, 3, 4, 5, 6, 7, 9, 10
 ```
 
 ### 7.2 Cross-Validation
@@ -1066,8 +1064,6 @@ M_de_jscm <- drop(Z_jscm %*% cv_jscm$beta)[cr_jscm$data$id]
 ```
 
 ``` r
-if (!requireNamespace("timeROC", quietly = TRUE))
-  install.packages("timeROC")
 library(survival)
 library(timeROC)
 

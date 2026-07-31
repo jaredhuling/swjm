@@ -16,7 +16,8 @@ cv_stagewise(
   max_iter = NULL,
   pp = NULL,
   estimate_frailty = FALSE,
-  ncores = 1L
+  ncores = 1L,
+  standardize = TRUE
 )
 ```
 
@@ -68,6 +69,11 @@ cv_stagewise(
   sequential). Uses
   [`parallel::parLapply`](https://rdrr.io/r/parallel/clusterApply.html)
   with a PSOCK cluster, which works on all platforms including Windows.
+
+- standardize:
+
+  Logical. If `TRUE` (default), covariates are standardized before
+  fitting (passed to `stagewise_fit`).
 
 ## Value
 
@@ -127,9 +133,9 @@ cv_res
 #> 
 #>   Covariates (p):              10
 #>   Lambda grid size:            101
-#>   Best position (combined):    101  (lambda = 1.06)
-#>   Selected variables:          2 readmission, 2 death
-#>     Readmission (alpha): 9, 10
+#>   Best position (combined):    101  (lambda = 1.007)
+#>   Selected variables:          3 readmission, 2 death
+#>     Readmission (alpha): 2, 9, 10
 #>     Death (beta):        9, 10
 # }
 ```

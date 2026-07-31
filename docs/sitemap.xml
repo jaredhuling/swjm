@@ -4,6 +4,7 @@
 <url><loc>http://jaredhuling.org/swjm/articles/swjm.html</loc></url>
 <url><loc>http://jaredhuling.org/swjm/authors.html</loc></url>
 <url><loc>http://jaredhuling.org/swjm/index.html</loc></url>
+<url><loc>http://jaredhuling.org/swjm/news/index.html</loc></url>
 <url><loc>http://jaredhuling.org/swjm/reference/baseline_hazard.html</loc></url>
 <url><loc>http://jaredhuling.org/swjm/reference/coop_norm.html</loc></url>
 <url><loc>http://jaredhuling.org/swjm/reference/count_digits.html</loc></url>
@@ -58,7 +59,9 @@
 <url><loc>http://jaredhuling.org/swjm/reference/plot.swjm_path.html</loc></url>
 <url><loc>http://jaredhuling.org/swjm/reference/plot.swjm_pred.html</loc></url>
 <url><loc>http://jaredhuling.org/swjm/reference/predict.swjm_cv.html</loc></url>
+<url><loc>http://jaredhuling.org/swjm/reference/prepare_data.html</loc></url>
 <url><loc>http://jaredhuling.org/swjm/reference/stagewise_fit.html</loc></url>
 <url><loc>http://jaredhuling.org/swjm/reference/swjm-package.html</loc></url>
+<url><loc>http://jaredhuling.org/swjm/reference/validate_data.html</loc></url>
 </urlset>
 

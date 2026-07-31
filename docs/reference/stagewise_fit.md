@@ -15,7 +15,8 @@ stagewise_fit(
   eps = NULL,
   max_iter = NULL,
   pp = NULL,
-  estimate_frailty = FALSE
+  estimate_frailty = FALSE,
+  standardize = TRUE
 )
 ```
 
@@ -55,6 +56,15 @@ stagewise_fit(
   uses the Kalbfleisch et al. (2013) frailty weights \\w_i(t)\\ in the
   estimating equations. If `FALSE` (default), uses unit weights
   (simplified model without frailty).
+
+- standardize:
+
+  Logical. If `TRUE` (default), covariates are divided by their standard
+  deviations before fitting and coefficients are rescaled back to the
+  original scale. For the JFM with time-varying covariates, the SD is
+  computed across all rows (all time points and subjects). For the JSCM
+  with time-invariant covariates, the SD is computed across subjects
+  only.
 
 ## Value
 
@@ -96,9 +106,9 @@ fit
 #> 
 #>   Covariates (p):            10
 #>   Iterations:                100
-#>   Lambda range:              [1.377, 1.906]
+#>   Lambda range:              [1.072, 1.933]
 #>   Active at final step:      4 readmission, 4 death
-#>     Readmission (alpha): 3, 4, 9, 10
-#>     Death (beta):        3, 4, 9, 10
+#>     Readmission (alpha): 1, 2, 9, 10
+#>     Death (beta):        1, 3, 9, 10
 # }
 ```
