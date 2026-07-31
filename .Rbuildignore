@@ -12,6 +12,7 @@
 ^.*\.tar\.gz$
 ^.*\.Rcheck$
 ^vignettes/swjm_cache$
+^vignettes/swjm_files$
 ^vignettes/swjm\.html$
 ^\.Rhistory$
 ^\.DS_Store$

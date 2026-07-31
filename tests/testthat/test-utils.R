@@ -36,12 +36,6 @@ test_that("coop_norm handles multiple pairs", {
   expect_equal(result, 8)
 })
 
-test_that("count_digits works", {
-  expect_equal(count_digits(0.0012), 3L)
-  expect_equal(count_digits(0.5), 1L)
-  expect_equal(count_digits(5), 0L)
-})
-
 test_that("create_folds creates K folds", {
   set.seed(1)
   folds <- create_folds(1:20, 5)

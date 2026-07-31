@@ -15,7 +15,8 @@ cv_stagewise(
   pp = NULL,
   estimate_frailty = FALSE,
   ncores = 1L,
-  standardize = TRUE
+  standardize = TRUE,
+  lambda_min_ratio = NULL
 )
 }
 \arguments{
@@ -48,6 +49,11 @@ PSOCK cluster, which works on all platforms including Windows.}
 
 \item{standardize}{Logical. If \code{TRUE} (default), covariates are
 standardized before fitting (passed to \code{stagewise_fit}).}
+
+\item{lambda_min_ratio}{Numeric. Passed to \code{\link{stagewise_fit}} for
+the full-data path; see there for the default. Fold fits are stopped at the
+smallest lambda in \code{lambda_seq} regardless, so they always cover the
+grid being scored.}
 }
 \value{
 An object of class \code{"swjm_cv"}, a list with components:

@@ -16,8 +16,13 @@
 #' @param model Character. Either \code{"jfm"} or \code{"jscm"}.
 #' @param penalty Character. One of \code{"coop"} (cooperative lasso),
 #'   \code{"lasso"}, or \code{"group"} (group lasso).
-#' @param eps Numeric. Step size for the stagewise update. If \code{NULL},
-#'   uses adaptive step size.
+#' @param eps Numeric. Base step size for the stagewise update, used at the top
+#'   of the regularization path. The step is divided by ten each time the dual
+#'   norm falls a further decade, so \code{eps} sets the resolution of the whole
+#'   path. If \code{NULL}, defaults to 0.1 for the JFM and 0.01 for the JSCM.
+#'   Smaller values trace the path more finely at proportionally greater cost;
+#'   \code{max_iter} must be large enough for the path to reach small
+#'   \code{lambda}.
 #' @param max_iter Integer. Maximum number of stagewise iterations.
 #' @param pp Integer. Early-stopping block size: algorithm checks every
 #'   \code{pp} iterations if fewer than 3 unique coordinates were updated.
@@ -25,6 +30,13 @@
 #'   the frailty variance and uses the Kalbfleisch et al. (2013) frailty
 #'   weights \eqn{w_i(t)} in the estimating equations. If \code{FALSE}
 #'   (default), uses unit weights (simplified model without frailty).
+#' @param lambda_min_ratio Numeric. The path stops once the dual norm falls
+#'   below this fraction of its value at the top of the path. Past that point
+#'   the coefficients are essentially static, so the remaining iterations cost
+#'   time without changing the fit. If \code{NULL}, defaults to 0.01 when
+#'   \code{n > p} and 1e-4 otherwise, following the convention used by
+#'   \code{glmnet}. Set to 0 to trace the path to the smallest reachable
+#'   \code{lambda}.
 #' @param standardize Logical. If \code{TRUE} (default), covariates are
 #'   divided by their standard deviations before fitting and coefficients
 #'   are rescaled back to the original scale. For the JFM with time-varying
@@ -57,7 +69,8 @@ stagewise_fit <- function(data, model = c("jfm", "jscm"),
                           penalty = c("coop", "lasso", "group"),
                           eps = NULL, max_iter = NULL, pp = NULL,
                           estimate_frailty = FALSE,
-                          standardize = TRUE) {
+                          standardize = TRUE,
+                          lambda_min_ratio = NULL) {
   model <- match.arg(model)
   penalty <- match.arg(penalty)
 
@@ -68,6 +81,18 @@ stagewise_fit <- function(data, model = c("jfm", "jscm"),
   cov_cols <- 6:ncol(data)
   initial_alpha <- numeric(p)
   initial_beta <- numeric(p)
+
+  # Where to stop the path. Follows the glmnet convention: a short path when
+  # there are many more observations than covariates, a longer one otherwise,
+  # since with p >= n the interesting solutions sit further down the path.
+  if (is.null(lambda_min_ratio)) {
+    n_subj <- length(unique(data$id))
+    lambda_min_ratio <- if (n_subj > p) 1e-2 else 1e-4
+  }
+  if (!is.numeric(lambda_min_ratio) || length(lambda_min_ratio) != 1L ||
+      is.na(lambda_min_ratio) || lambda_min_ratio < 0 || lambda_min_ratio >= 1) {
+    stop("'lambda_min_ratio' must be a single number in [0, 1).", call. = FALSE)
+  }
 
   # Standardize covariates (divide by SD, no centering — Cox/AFT models
   # absorb the mean into the baseline)
@@ -97,14 +122,16 @@ stagewise_fit <- function(data, model = c("jfm", "jscm"),
     result <- stagewise_jfm(initial_alpha, initial_beta, data_fit, penalty,
                             eps1 = 1e-6, adap = 1L, eps2 = eps,
                             iter = max_iter, pp = pp,
-                            estimate_frailty = estimate_frailty)
+                            estimate_frailty = estimate_frailty,
+                            lambda_min_ratio = lambda_min_ratio)
   } else {
     if (is.null(eps)) eps <- 0.01
     if (is.null(max_iter)) max_iter <- 5000L
     if (is.null(pp)) pp <- max_iter   # disable early stopping by default for JSCM
     result <- stagewise_jscm(initial_alpha, initial_beta, data_fit, penalty,
                              eps1 = 1e-6, adap = 1L, eps2 = eps,
-                             iter = max_iter, pp = pp)
+                             iter = max_iter, pp = pp,
+                             lambda_min_ratio = lambda_min_ratio)
   }
 
   # Rescale coefficients back to original covariate scale:
@@ -238,7 +265,7 @@ summary.swjm_path <- function(object, ...) {
 #' @keywords internal
 stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
                           eps1, adap, eps2, iter, pp = 200L,
-                          estimate_frailty = FALSE) {
+                          estimate_frailty = FALSE, lambda_min_ratio = 0) {
   p <- length(initial_alpha)
   dc <- extract_data_components(Data2)
   Z <- dc$Z; n <- dc$n; td <- dc$td; td.id <- dc$td.id; d_td <- dc$d_td
@@ -355,12 +382,18 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
   g2_update[, 1] <- g2
 
   AA <- integer(0)
+  lam0 <- NA_real_
 
   while (k < iter) {
     thetak <- thetaK
 
-    # Compute dual norm and update direction
-    step_info <- .compute_step(g1, g2, p, penalty, adap, eps2, cc)
+    # Compute dual norm and update direction. The first pass fixes lam0, the
+    # dual norm at the top of the path, which anchors the adaptive step size.
+    step_info <- .compute_step(g1, g2, p, penalty, adap, eps2, cc, lam0)
+    if (!is.finite(lam0)) {
+      lam0 <- step_info$lambda_val
+      step_info <- .compute_step(g1, g2, p, penalty, adap, eps2, cc, lam0)
+    }
     delta <- step_info$delta
     i0 <- step_info$i0
     eps2_use <- step_info$eps2
@@ -405,6 +438,13 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
 
     lambda_vec[k] <- lambda_val
 
+    # Stop once the dual norm has fallen to lambda_min_ratio of its value at
+    # the top of the path. Beyond that point the coefficients are essentially
+    # static -- the remaining iterations contribute a negligible fraction of
+    # the total movement -- so continuing only costs time and inflates the
+    # lambda grid that cross-validation must search.
+    if (is.finite(lam0) && lambda_val < lambda_min_ratio * lam0) break
+
     # Early stop check: stop only if a single coordinate dominates every step
     # in the last pp iterations (truly stuck), not merely if two variables
     # alternate.
@@ -415,7 +455,7 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
   }
 
   # Final lambda
-  final_info <- .compute_step(g1, g2, p, penalty, adap, eps2, cc)
+  final_info <- .compute_step(g1, g2, p, penalty, adap, eps2, cc, lam0)
   lambda_vec[k + 1] <- final_info$lambda_val
 
   # Trim storage
@@ -439,7 +479,8 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
 
 #' @keywords internal
 stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
-                           eps1, adap, eps2, iter, pp = 2000L) {
+                           eps1, adap, eps2, iter, pp = 2000L,
+                           lambda_min_ratio = 0) {
   p <- length(initial_alpha)
   n <- length(unique(Data2$id))
 
@@ -511,12 +552,18 @@ stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
   g2_update[, 1] <- g2
 
   AA <- integer(0)
+  lam0 <- NA_real_
 
   while (k < iter) {
     thetak <- thetaK
 
-    # Compute dual norm and update direction
-    step_info <- .compute_step(g1, g2, p, penalty, adap, eps2, cc)
+    # Compute dual norm and update direction. The first pass fixes lam0, the
+    # dual norm at the top of the path, which anchors the adaptive step size.
+    step_info <- .compute_step(g1, g2, p, penalty, adap, eps2, cc, lam0)
+    if (!is.finite(lam0)) {
+      lam0 <- step_info$lambda_val
+      step_info <- .compute_step(g1, g2, p, penalty, adap, eps2, cc, lam0)
+    }
     delta <- step_info$delta
     i0 <- step_info$i0
     eps2_use <- step_info$eps2
@@ -554,6 +601,13 @@ stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
 
     lambda_vec[k] <- lambda_val
 
+    # Stop once the dual norm has fallen to lambda_min_ratio of its value at
+    # the top of the path. Beyond that point the coefficients are essentially
+    # static -- the remaining iterations contribute a negligible fraction of
+    # the total movement -- so continuing only costs time and inflates the
+    # lambda grid that cross-validation must search.
+    if (is.finite(lam0) && lambda_val < lambda_min_ratio * lam0) break
+
     # Early stop check: stop only if a single coordinate dominates every step
     # in the last pp iterations (truly stuck), not merely if two variables
     # alternate.
@@ -564,7 +618,7 @@ stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
   }
 
   # Final lambda
-  final_info <- .compute_step(g1, g2, p, penalty, adap, eps2, cc)
+  final_info <- .compute_step(g1, g2, p, penalty, adap, eps2, cc, lam0)
   lambda_vec[k + 1] <- final_info$lambda_val
 
   # Trim storage
@@ -596,7 +650,21 @@ stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
 #' e_{j*} sgn(g)/xi when a death coordinate wins, and the group / same-sign
 #' cooperative L2 direction is (g_a, g_b/xi^2)/||(g_a, g_b/xi)||_2, i.e. cc
 #' times the rescaled component. The amplification is applied at the end.
-.compute_step <- function(g1, g2, p, penalty, adap, eps2, cc = 1) {
+#' @keywords internal
+#'
+#' Adaptive step size. The step starts at \code{eps2} at the top of the path
+#' and is divided by ten each time the dual norm falls a further decade below
+#' its initial value \code{lam0}. Anchoring to \code{lam0} (rather than to the
+#' absolute magnitude of the dual norm) keeps the rule scale invariant, so the
+#' step depends only on how far along the path we are, and makes \code{eps}
+#' the meaningful base resolution for both model types.
+.adaptive_eps <- function(eps2, dual, lam0) {
+  if (!is.finite(lam0) || lam0 <= 0 || !is.finite(dual) || dual <= 0) return(eps2)
+  k <- max(0, floor(log10(lam0)) - floor(log10(dual)))
+  eps2 * 10^(-k)
+}
+
+.compute_step <- function(g1, g2, p, penalty, adap, eps2, cc = 1, lam0 = NA_real_) {
   delta <- numeric(2 * p)
   i0 <- 1L
   lambda_val <- 0
@@ -628,7 +696,7 @@ stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
     }
     lambda_val <- dual[i0, 1]
     if (adap == 1) {
-      eps2_use <- 0.1^(count_digits(dual[i0, 1])) * 0.1
+      eps2_use <- .adaptive_eps(eps2, dual[i0, 1], lam0)
     }
 
   } else if (penalty == "lasso") {
@@ -638,7 +706,7 @@ stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
     delta[i0] <- sign(gg[i0])
     lambda_val <- dual_val
     if (adap == 1) {
-      eps2_use <- 0.1^(count_digits(dual_val)) * 0.1
+      eps2_use <- .adaptive_eps(eps2, dual_val, lam0)
     }
 
   } else if (penalty == "group") {
@@ -653,7 +721,7 @@ stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
     delta[i0 + p] <- gi0[2]
     lambda_val <- dual_vec[i0]
     if (adap == 1) {
-      eps2_use <- 0.1^(count_digits(dual_vec[i0])) * 0.1
+      eps2_use <- .adaptive_eps(eps2, dual_vec[i0], lam0)
     }
   }
 

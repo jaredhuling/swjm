@@ -12,7 +12,8 @@ stagewise_fit(
   max_iter = NULL,
   pp = NULL,
   estimate_frailty = FALSE,
-  standardize = TRUE
+  standardize = TRUE,
+  lambda_min_ratio = NULL
 )
 }
 \arguments{
@@ -25,8 +26,13 @@ and covariate columns \code{x1}, \ldots, \code{xp}.}
 \item{penalty}{Character. One of \code{"coop"} (cooperative lasso),
 \code{"lasso"}, or \code{"group"} (group lasso).}
 
-\item{eps}{Numeric. Step size for the stagewise update. If \code{NULL},
-uses adaptive step size.}
+\item{eps}{Numeric. Base step size for the stagewise update, used at the top
+of the regularization path. The step is divided by ten each time the dual
+norm falls a further decade, so \code{eps} sets the resolution of the whole
+path. If \code{NULL}, defaults to 0.1 for the JFM and 0.01 for the JSCM.
+Smaller values trace the path more finely at proportionally greater cost;
+\code{max_iter} must be large enough for the path to reach small
+\code{lambda}.}
 
 \item{max_iter}{Integer. Maximum number of stagewise iterations.}
 
@@ -44,6 +50,14 @@ are rescaled back to the original scale. For the JFM with time-varying
 covariates, the SD is computed across all rows (all time points and
 subjects). For the JSCM with time-invariant covariates, the SD is
 computed across subjects only.}
+
+\item{lambda_min_ratio}{Numeric. The path stops once the dual norm falls
+below this fraction of its value at the top of the path. Past that point
+the coefficients are essentially static, so the remaining iterations cost
+time without changing the fit. If \code{NULL}, defaults to 0.01 when
+\code{n > p} and 1e-4 otherwise, following the convention used by
+\code{glmnet}. Set to 0 to trace the path to the smallest reachable
+\code{lambda}.}
 }
 \value{
 An object of class \code{"swjm_path"}, a list with components:

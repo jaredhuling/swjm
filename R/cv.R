@@ -25,6 +25,10 @@
 #' @param ncores Integer. Number of cores for parallel fold training
 #'   (default 1, sequential). Uses \code{parallel::parLapply} with a
 #'   PSOCK cluster, which works on all platforms including Windows.
+#' @param lambda_min_ratio Numeric. Passed to \code{\link{stagewise_fit}} for
+#'   the full-data path; see there for the default. Fold fits are stopped at the
+#'   smallest lambda in \code{lambda_seq} regardless, so they always cover the
+#'   grid being scored.
 #' @param standardize Logical. If \code{TRUE} (default), covariates are
 #'   standardized before fitting (passed to \code{stagewise_fit}).
 #'
@@ -62,7 +66,8 @@ cv_stagewise <- function(data, model = c("jfm", "jscm"),
                          eps = NULL, max_iter = NULL, pp = NULL,
                          estimate_frailty = FALSE,
                          ncores = 1L,
-                         standardize = TRUE) {
+                         standardize = TRUE,
+                         lambda_min_ratio = NULL) {
   model <- match.arg(model)
   penalty <- match.arg(penalty)
   data <- prepare_data(data, caller = "cv_stagewise")
@@ -111,18 +116,24 @@ cv_stagewise <- function(data, model = c("jfm", "jscm"),
     lambda_seq <- lambda_seq[dec_idx]
   }
 
+  # Fold fits only need to reach the smallest lambda in the target grid.
+  # Expressing that as a ratio of each fold's own starting dual norm would risk
+  # stopping a fold short of the grid, so derive the floor from lambda_seq and
+  # leave a decade of margin.
+  fold_ratio <- min(lambda_seq) / max(lambda_seq) / 10
+
   # CV fold fits + cross-fitted EE on standardized data
   if (model == "jfm") {
     result <- cv_jfm(data_std, penalty, lambda_seq, K, initial_alpha,
                      initial_beta, eps1 = 1e-6, adap = 1L, eps2 = eps,
                      iter = max_iter, pp = pp,
                      estimate_frailty = estimate_frailty,
-                     ncores = ncores)
+                     ncores = ncores, lambda_min_ratio = fold_ratio)
   } else {
     result <- cv_jscm(data_std, penalty, lambda_seq, K, initial_alpha,
                       initial_beta, eps1 = 1e-6, adap = 1L, eps2 = eps,
                       iter = max_iter, pp = pp,
-                      ncores = ncores)
+                      ncores = ncores, lambda_min_ratio = fold_ratio)
   }
 
   # --- Derived quantities from the full-data path ---
@@ -295,7 +306,8 @@ summary.swjm_cv <- function(object, ...) {
 #' @keywords internal
 cv_jfm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
                    initial_beta, eps1, adap, eps2, iter, pp,
-                   estimate_frailty = FALSE, ncores = 1L) {
+                   estimate_frailty = FALSE, ncores = 1L,
+                   lambda_min_ratio = 0) {
   p <- ncol(Data2) - 5L
   n1 <- length(unique(Data2$id))
 
@@ -319,7 +331,8 @@ cv_jfm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
 
     results_tr <- stagewise_jfm(initial_alpha, initial_beta, Data2_tr,
                                 penalty, eps1, adap, eps2, iter, pp,
-                                estimate_frailty = estimate_frailty)
+                                estimate_frailty = estimate_frailty,
+                                lambda_min_ratio = lambda_min_ratio)
 
     lambda_seq_tr <- results_tr$lambda
     theta_tr <- results_tr$theta_update
@@ -436,7 +449,7 @@ cv_jfm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
 #' @keywords internal
 cv_jscm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
                     initial_beta, eps1, adap, eps2, iter, pp,
-                    ncores = 1L) {
+                    ncores = 1L, lambda_min_ratio = 0) {
   p <- ncol(Data2) - 5L
   n1 <- length(unique(Data2$id))
 
@@ -463,7 +476,8 @@ cv_jscm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
     Data2_tr$id <- match(Data2_tr$id, unique(Data2_tr$id))
 
     results_tr <- stagewise_jscm(initial_alpha, initial_beta, Data2_tr,
-                                 penalty, eps1, adap, eps2, iter, pp)
+                                 penalty, eps1, adap, eps2, iter, pp,
+                                 lambda_min_ratio = lambda_min_ratio)
     lambda_seq_tr <- results_tr$lambda
     theta_tr <- results_tr$theta_update
     dec_idx <- extract_decreasing_indices(lambda_seq_tr)

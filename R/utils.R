@@ -236,27 +236,6 @@ coop_norm <- function(theta, p) {
 }
 
 
-#' Count Leading Zeros After Decimal Point
-#'
-#' Used for adaptive step size computation. Returns the position of the first
-#' non-zero digit after the decimal point.
-#'
-#' @param num A numeric scalar.
-#'
-#' @return Integer count of leading zeros after the decimal point.
-#'
-#' @keywords internal
-count_digits <- function(num) {
-  num_str <- as.character(num)
-  decimal_pos <- gregexpr("\\.", num_str)[[1]][1]
-  if (decimal_pos == -1) return(0L)
-  after_decimal <- substring(num_str, decimal_pos + 1)
-  first_nonzero_pos <- gregexpr("[1-9]", after_decimal)[[1]][1]
-  if (first_nonzero_pos == -1) return(0L)
-  as.integer(first_nonzero_pos)
-}
-
-
 #' Create Stratified K-Fold Splits
 #'
 #' Randomly assigns a vector of IDs into K approximately equal-sized folds.
