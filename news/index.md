@@ -2,6 +2,8 @@
 
 ## swjm 0.1.2
 
+CRAN release: 2026-07-30
+
 - Corrected the stagewise update directions under the scaled penalties.
   The argmax of the update objective over the scaled-penalty unit ball
   carries a factor 1/xi on every death-model coordinate (scaled lasso
