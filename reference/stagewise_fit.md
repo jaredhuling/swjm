@@ -16,7 +16,8 @@ stagewise_fit(
   max_iter = NULL,
   pp = NULL,
   estimate_frailty = FALSE,
-  standardize = TRUE
+  standardize = TRUE,
+  lambda_min_ratio = NULL
 )
 ```
 
@@ -38,8 +39,13 @@ stagewise_fit(
 
 - eps:
 
-  Numeric. Step size for the stagewise update. If `NULL`, uses adaptive
-  step size.
+  Numeric. Base step size for the stagewise update, used at the top of
+  the regularization path. The step is divided by ten each time the dual
+  norm falls a further decade, so `eps` sets the resolution of the whole
+  path. If `NULL`, defaults to 0.1 for the JFM and 0.01 for the JSCM.
+  Smaller values trace the path more finely at proportionally greater
+  cost; `max_iter` must be large enough for the path to reach small
+  `lambda`.
 
 - max_iter:
 
@@ -65,6 +71,15 @@ stagewise_fit(
   computed across all rows (all time points and subjects). For the JSCM
   with time-invariant covariates, the SD is computed across subjects
   only.
+
+- lambda_min_ratio:
+
+  Numeric. The path stops once the dual norm falls below this fraction
+  of its value at the top of the path. Past that point the coefficients
+  are essentially static, so the remaining iterations cost time without
+  changing the fit. If `NULL`, defaults to 0.01 when `n > p` and 1e-4
+  otherwise, following the convention used by `glmnet`. Set to 0 to
+  trace the path to the smallest reachable `lambda`.
 
 ## Value
 
@@ -106,7 +121,7 @@ fit
 #> 
 #>   Covariates (p):            10
 #>   Iterations:                100
-#>   Lambda range:              [1.063, 1.363]
+#>   Lambda range:              [0.6026, 1.363]
 #>   Active at final step:      4 readmission, 4 death
 #>     Readmission (alpha): 1, 2, 9, 10
 #>     Death (beta):        1, 3, 9, 10

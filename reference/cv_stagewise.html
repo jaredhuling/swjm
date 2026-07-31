@@ -9,7 +9,7 @@ using K-fold cross-validation with cross-fitted estimating equations."></head><b
 
     <a class="navbar-brand me-2" href="../index.html">swjm</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -53,7 +53,8 @@ using K-fold cross-validation with cross-fitted estimating equations.</p>
 <span>  pp <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  estimate_frailty <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  ncores <span class="op">=</span> <span class="fl">1L</span>,</span>
-<span>  standardize <span class="op">=</span> <span class="cn">TRUE</span></span>
+<span>  standardize <span class="op">=</span> <span class="cn">TRUE</span>,</span>
+<span>  lambda_min_ratio <span class="op">=</span> <span class="cn">NULL</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -112,6 +113,13 @@ PSOCK cluster, which works on all platforms including Windows.</p></dd>
 <dd><p>Logical. If <code>TRUE</code> (default), covariates are
 standardized before fitting (passed to <code>stagewise_fit</code>).</p></dd>
 
+
+<dt id="arg-lambda-min-ratio">lambda_min_ratio<a class="anchor" aria-label="anchor" href="#arg-lambda-min-ratio"></a></dt>
+<dd><p>Numeric. Passed to <code><a href="stagewise_fit.html">stagewise_fit</a></code> for
+the full-data path; see there for the default. Fold fits are stopped at the
+smallest lambda in <code>lambda_seq</code> regardless, so they always cover the
+grid being scored.</p></dd>
+
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
@@ -164,10 +172,10 @@ terminal score norm.</p></dd>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Covariates (p):              10</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>   Lambda grid size:            101</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Best position (combined):    101  (lambda = 1.045)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   Selected variables:          4 readmission, 5 death</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Readmission (alpha): 2, 4, 9, 10</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>     Death (beta):        2, 3, 4, 9, 10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Best position (combined):    101  (lambda = 0.6182)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   Selected variables:          5 readmission, 6 death</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Readmission (alpha): 1, 2, 4, 9, 10</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     Death (beta):        1, 2, 3, 4, 9, 10</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>

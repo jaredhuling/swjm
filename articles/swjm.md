@@ -285,11 +285,11 @@ fit_jfm
 #> Stagewise path (jfm/coop)
 #> 
 #>   Covariates (p):            10
-#>   Iterations:                5000
-#>   Lambda range:              [1, 1.27]
-#>   Active at final step:      6 readmission, 5 death
-#>     Readmission (alpha): 1, 2, 3, 4, 9, 10
-#>     Death (beta):        1, 3, 4, 9, 10
+#>   Iterations:                809
+#>   Lambda range:              [0.01265, 1.28]
+#>   Active at final step:      10 readmission, 9 death
+#>     Readmission (alpha): 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+#>     Death (beta):        1, 2, 3, 4, 5, 7, 8, 9, 10
 ```
 
 The returned `swjm_path` object contains:
@@ -314,17 +314,17 @@ active_final <- which(fit_jfm$alpha[, k] != 0 |
                       fit_jfm$beta[, k]  != 0)
 ```
 
-- Path length: 5001 steps
-- Lambda range: \[1, 1.27\]
-- Active variables at final step: 1 2 3 4 9 10
+- Path length: 810 steps
+- Lambda range: \[0.01265, 1.28\]
+- Active variables at final step: 1 2 3 4 5 6 7 8 9 10
 
 Readmission (alpha) coefficients at the final step:
 
 ``` r
 
 round(fit_jfm$alpha[, k], 4)
-#>  [1]  0.1442 -0.1739  0.0092 -0.0015  0.0000  0.0000  0.0000  0.0000  0.0779
-#> [10] -0.1146
+#>  [1]  1.1321 -1.1268  0.1305 -0.0507  0.0083  0.0070  0.0033  0.0016  0.9858
+#> [10] -1.0134
 ```
 
 [`summary()`](https://rdrr.io/r/base/summary.html) shows a compact table
@@ -336,21 +336,23 @@ readmission-only, or death-only):
 summary(fit_jfm)
 #> Stagewise path (jfm/coop)
 #> 
-#>   p = 10  |  5000 iterations  |  lambda: [1, 1.27]
-#>   Decreasing path: 611 steps
+#>   p = 10  |  809 iterations  |  lambda: [0.01265, 1.28]
+#>   Decreasing path: 513 steps
 #> 
 #>   Path-end coefficients (nonzero variables):
 #> 
 #>   Variable    alpha       beta        Type
 #>   ----------  ----------  ----------  ----------------
-#>   x10         -0.1146     -0.3948     shared (+)
-#>   x3          +0.0092     +0.2888     shared (+)
-#>   x2          -0.1739          —    readmission only
-#>   x9          +0.0779     +0.3497     shared (+)
-#>   x1          +0.1442     +0.0615     shared (+)
-#>   x4          -0.0015     -0.7624     shared (+)
-#> 
-#>   Inactive: x5, x6, x7, x8
+#>   x3          +0.1305     +1.1667     shared (+)
+#>   x10         -1.0134     -0.9185     shared (+)
+#>   x2          -1.1268     -0.0487     shared (+)
+#>   x9          +0.9858     +0.9463     shared (+)
+#>   x1          +1.1321     +0.2899     shared (+)
+#>   x4          -0.0507     -1.1693     shared (+)
+#>   x8          +0.0016     +0.0752     shared (+)
+#>   x5          +0.0083     +0.0149     shared (+)
+#>   x7          +0.0033     +0.0138     shared (+)
+#>   x6          +0.0070          —    readmission only
 ```
 
 ### 5.3 Plot the Coefficient Path
@@ -393,7 +395,7 @@ dec_idx     <- swjm:::extract_decreasing_indices(lambda_path)
 lambda_seq  <- lambda_path[dec_idx]
 ```
 
-Full path: 5001 steps; decreasing path: 611 steps
+Full path: 810 steps; decreasing path: 513 steps
 
 ``` r
 
@@ -409,11 +411,11 @@ cv_jfm
 #> Cross-validation (jfm/coop)
 #> 
 #>   Covariates (p):              10
-#>   Lambda grid size:            611
-#>   Best position (combined):    611  (lambda = 1)
-#>   Selected variables:          6 readmission, 5 death
-#>     Readmission (alpha): 1, 2, 3, 4, 9, 10
-#>     Death (beta):        1, 3, 4, 9, 10
+#>   Lambda grid size:            513
+#>   Best position (combined):    491  (lambda = 0.01741)
+#>   Selected variables:          10 readmission, 9 death
+#>     Readmission (alpha): 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+#>     Death (beta):        1, 2, 3, 4, 5, 7, 8, 9, 10
 ```
 
 The returned `swjm_cv` object contains:
@@ -449,16 +451,17 @@ dotted). The vertical dashed line marks the optimal $`\lambda`$.
 
 ### 5.6 Extract Coefficients and Summarize
 
-Selected readmission (alpha) variables: 1 2 3 4 9 10
+Selected readmission (alpha) variables: 1 2 3 4 5 6 7 8 9 10
 
-Selected death (beta) variables: 1 3 4 9 10
+Selected death (beta) variables: 1 2 3 4 5 7 8 9 10
 
 Nonzero alpha:
 
 ``` r
 
 round(cv_jfm$alpha[cv_jfm$alpha != 0], 4)
-#> [1]  0.1432 -0.1728  0.0073 -0.0003  0.0756 -0.1043
+#>  [1]  1.1271 -1.1216  0.1275 -0.0477  0.0054  0.0040  0.0023  0.0014  0.9796
+#> [10] -1.0084
 ```
 
 Nonzero beta:
@@ -466,7 +469,7 @@ Nonzero beta:
 ``` r
 
 round(cv_jfm$beta[cv_jfm$beta != 0], 4)
-#> [1]  0.0612  0.2329 -0.1233  0.3414 -0.3639
+#> [1]  0.2962 -0.0553  1.1658 -1.1676  0.0134  0.0121  0.0690  0.9528 -0.9185
 ```
 
 [`summary()`](https://rdrr.io/r/base/summary.html) shows a formatted
@@ -477,20 +480,22 @@ table with the CV-optimal coefficients:
 summary(cv_jfm)
 #> CV-selected model (jfm/coop)
 #> 
-#>   p = 10  |  Lambda grid: 611 steps  |  CV optimal: step 611 (lambda = 1)
+#>   p = 10  |  Lambda grid: 513 steps  |  CV optimal: step 491 (lambda = 0.01741)
 #> 
-#>   Selected coefficients  (6 readmission, 5 death):
+#>   Selected coefficients  (10 readmission, 9 death):
 #> 
 #>   Variable    alpha       beta        Type
 #>   ----------  ----------  ----------  ----------------
-#>   x10         -0.1043     -0.3639     shared (+)
-#>   x9          +0.0756     +0.3414     shared (+)
-#>   x3          +0.0073     +0.2329     shared (+)
-#>   x1          +0.1432     +0.0612     shared (+)
-#>   x2          -0.1728          —    readmission only
-#>   x4          -0.0003     -0.1233     shared (+)
-#> 
-#>   Inactive (4): x5, x6, x7, x8
+#>   x9          +0.9796     +0.9528     shared (+)
+#>   x10         -1.0084     -0.9185     shared (+)
+#>   x1          +1.1271     +0.2962     shared (+)
+#>   x3          +0.1275     +1.1658     shared (+)
+#>   x4          -0.0477     -1.1676     shared (+)
+#>   x2          -1.1216     -0.0553     shared (+)
+#>   x8          +0.0014     +0.0690     shared (+)
+#>   x5          +0.0054     +0.0134     shared (+)
+#>   x7          +0.0023     +0.0121     shared (+)
+#>   x6          +0.0040          —    readmission only
 ```
 
 [`coef()`](https://rdrr.io/r/stats/coef.html) returns the combined
@@ -514,11 +519,11 @@ JFM, Breslow-type estimators are used:
 bh <- baseline_hazard(cv_jfm, times = c(0.5, 1.0, 2.0, 4.0, 6.0))
 print(bh)
 #>   time cumhaz_readmission cumhaz_death
-#> 1  0.5           0.864854   0.06280522
-#> 2  1.0           1.288666   0.09811808
-#> 3  2.0           1.919539   0.19350963
-#> 4  4.0           2.752144   0.30751397
-#> 5  6.0           3.313761   0.39696802
+#> 1  0.5           0.497635   0.01758640
+#> 2  1.0           1.017033   0.03251238
+#> 3  2.0           1.934546   0.07618112
+#> 4  4.0           3.872100   0.14932857
+#> 5  6.0           5.471606   0.20358831
 ```
 
 To retrieve only one of the two processes:
@@ -530,11 +535,11 @@ bh_re <- baseline_hazard(cv_jfm, times = seq(0, 5, by = 0.5),
 head(bh_re)
 #>   time cumhaz_readmission
 #> 1  0.0           0.000000
-#> 2  0.5           0.864854
-#> 3  1.0           1.288666
-#> 4  1.5           1.642736
-#> 5  2.0           1.919539
-#> 6  2.5           2.157865
+#> 2  0.5           0.497635
+#> 3  1.0           1.017033
+#> 4  1.5           1.495660
+#> 5  2.0           1.934546
+#> 6  2.5           2.433067
 ```
 
 ### 5.8 Survival Prediction
@@ -583,18 +588,18 @@ The `swjm_pred` object contains:
 # Survival probabilities for all subjects at first few time points
 round(pred$S_re[, 1:5], 3)
 #>            t=8.134e-05 t=0.0002363 t=0.0002812 t=0.0003871 t=0.0006399
-#> Patient_1        0.998       0.998       0.996       0.994       0.993
-#> Patient_2        0.999       0.999       0.997       0.996       0.995
-#> Patient_3        0.999       0.999       0.998       0.997       0.995
-#> Patient_4        0.998       0.998       0.996       0.995       0.993
-#> Patient_5        0.998       0.998       0.997       0.995       0.993
-#> Patient_6        0.998       0.998       0.995       0.993       0.990
-#> Patient_7        0.998       0.998       0.996       0.993       0.991
-#> Patient_8        0.998       0.998       0.997       0.995       0.994
-#> Patient_9        0.998       0.998       0.996       0.995       0.993
-#> Patient_10       0.998       0.998       0.996       0.993       0.991
-#> Patient_11       0.998       0.998       0.997       0.995       0.994
-#> Patient_12       0.996       0.996       0.993       0.989       0.986
+#> Patient_1        0.999       0.999       0.999       0.998       0.998
+#> Patient_2        1.000       1.000       1.000       1.000       1.000
+#> Patient_3        1.000       1.000       1.000       1.000       1.000
+#> Patient_4        1.000       1.000       0.999       0.999       0.999
+#> Patient_5        1.000       1.000       1.000       1.000       1.000
+#> Patient_6        0.995       0.995       0.990       0.985       0.980
+#> Patient_7        0.998       0.998       0.997       0.995       0.994
+#> Patient_8        1.000       1.000       1.000       1.000       1.000
+#> Patient_9        1.000       1.000       1.000       0.999       0.999
+#> Patient_10       0.999       0.999       0.998       0.997       0.996
+#> Patient_11       1.000       1.000       1.000       1.000       1.000
+#> Patient_12       0.981       0.981       0.963       0.945       0.926
 ```
 
 [`plot()`](https://rdrr.io/r/graphics/plot.default.html) on a
@@ -698,8 +703,8 @@ fit_jscm
 #> Stagewise path (jscm/coop)
 #> 
 #>   Covariates (p):            10
-#>   Iterations:                5000
-#>   Lambda range:              [0.1005, 2.143]
+#>   Iterations:                2746
+#>   Lambda range:              [0.02004, 2.167]
 #>   Active at final step:      10 readmission, 9 death
 #>     Readmission (alpha): 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
 #>     Death (beta):        1, 2, 3, 4, 5, 6, 7, 9, 10
@@ -725,8 +730,8 @@ cv_jscm
 #> Cross-validation (jscm/coop)
 #> 
 #>   Covariates (p):              10
-#>   Lambda grid size:            314
-#>   Best position (combined):    278  (lambda = 0.2825)
+#>   Lambda grid size:            980
+#>   Best position (combined):    617  (lambda = 0.2684)
 #>   Selected variables:          9 readmission, 9 death
 #>     Readmission (alpha): 1, 2, 3, 4, 5, 6, 7, 9, 10
 #>     Death (beta):        1, 2, 3, 4, 5, 6, 7, 9, 10
@@ -754,21 +759,21 @@ plot(cv_jscm)
 summary(cv_jscm)
 #> CV-selected model (jscm/coop)
 #> 
-#>   p = 10  |  Lambda grid: 314 steps  |  CV optimal: step 278 (lambda = 0.2825)
+#>   p = 10  |  Lambda grid: 980 steps  |  CV optimal: step 617 (lambda = 0.2684)
 #> 
 #>   Selected coefficients  (9 readmission, 9 death):
 #> 
 #>   Variable    alpha       beta        Type
 #>   ----------  ----------  ----------  ----------------
-#>   x10         -1.0355     -1.9168     shared (+)
-#>   x3          +0.3709     +1.9266     shared (+)
-#>   x9          +1.0624     +0.8060     shared (+)
-#>   x1          +1.2583     +0.1323     shared (+)
-#>   x4          -0.0027     -1.1036     shared (+)
-#>   x2          -0.8297     -0.0229     shared (+)
-#>   x7          -0.2060     -0.4410     shared (+)
-#>   x5          -0.1610     -0.3408     shared (+)
-#>   x6          +0.0506     +0.0565     shared (+)
+#>   x10         -1.0296     -1.8814     shared (+)
+#>   x3          +0.3603     +1.8789     shared (+)
+#>   x9          +1.0545     +0.7728     shared (+)
+#>   x1          +1.2462     +0.1085     shared (+)
+#>   x4          -0.0037     -0.9539     shared (+)
+#>   x2          -0.8208     -0.0183     shared (+)
+#>   x7          -0.1993     -0.4211     shared (+)
+#>   x5          -0.1523     -0.3176     shared (+)
+#>   x6          +0.0538     +0.0924     shared (+)
 #> 
 #>   Inactive (1): x8
 ```
@@ -787,11 +792,11 @@ scale.
 bh_jscm <- baseline_hazard(cv_jscm, times = c(0.5, 1.0, 2.0, 3.0, 4.0))
 print(bh_jscm)
 #>   time cumhaz_readmission cumhaz_death
-#> 1  0.5          0.7764333    0.0813419
-#> 2  1.0          1.2969592    0.1295158
-#> 3  2.0          2.1218172    0.2061035
-#> 4  3.0          2.7536773    0.2634039
-#> 5  4.0          3.1578858    0.3174247
+#> 1  0.5          0.7782687   0.08053915
+#> 2  1.0          1.3022526   0.13186883
+#> 3  2.0          2.1338621   0.20947055
+#> 4  3.0          2.7553844   0.26691140
+#> 5  4.0          3.1708277   0.33025831
 ```
 
 ### 7.5 Survival Prediction and AFT Interpretation
@@ -828,15 +833,15 @@ pred_jscm
 #> 
 #>   Subjects:                3
 #>   Time points:             1043
-#>   Time range:              [0.0005034, 80.88]
+#>   Time range:              [0.0005079, 79.01]
 #> 
 #>   Time-acceleration factors (exp(alpha^T z) for recurrence):
 #> Patient_1 Patient_2 Patient_3 
-#>   12.8613    0.3113    0.2908 
+#>   12.6656    0.3088    0.2956 
 #> 
 #>   Time-acceleration factors (exp(beta^T z) for death):
 #> Patient_1 Patient_2 Patient_3 
-#>    0.8075    1.5937    0.7996 
+#>    0.7641    1.4415    0.7399 
 #> 
 #>   Use plot() to visualize survival curves and predictor contributions.
 ```
@@ -847,7 +852,7 @@ Recurrence time-acceleration factors (total per subject):
 
 round(pred_jscm$time_accel_re, 3)
 #> Patient_1 Patient_2 Patient_3 
-#>    12.861     0.311     0.291
+#>    12.666     0.309     0.296
 ```
 
 [`plot()`](https://rdrr.io/r/graphics/plot.default.html) produces the
@@ -924,9 +929,9 @@ same_sign <- if (length(shared) > 0) shared[sign(a[shared]) == sign(b[shared])] 
 opp_sign  <- if (length(shared) > 0) shared[sign(a[shared]) != sign(b[shared])] else integer(0)
 ```
 
-- Readmission-only: 2
+- Readmission-only: 6
 - Death-only:
-- Shared (same sign): 1, 3, 4, 9, 10
+- Shared (same sign): 1, 2, 3, 4, 5, 7, 8, 9, 10
 - Shared (opp. sign):
 
 ### 8.3 Survival Curve Interpretation
@@ -959,8 +964,8 @@ Readmission log-hazard contributions for Patient_1 (nonzero):
 ``` r
 
 round(c1_re[c1_re != 0], 4)
-#>      x1      x2      x3      x4      x9     x10 
-#>  0.3275 -0.3942  0.0093 -0.0002  0.0566  0.0005
+#>      x1      x2      x3      x4      x5      x6      x7      x8      x9     x10 
+#>  2.5780 -2.5590  0.1623 -0.0357  0.0000  0.0092  0.0053  0.0018  0.7329  0.0049
 ```
 
 Death log-hazard contributions for Patient_1 (nonzero):
@@ -968,8 +973,8 @@ Death log-hazard contributions for Patient_1 (nonzero):
 ``` r
 
 round(c1_de[c1_de != 0], 4)
-#>      x1      x3      x4      x9     x10 
-#>  0.1399  0.2964 -0.0922  0.2554  0.0018
+#>      x1      x2      x3      x4      x5      x7      x8      x9     x10 
+#>  0.6775 -0.1261  1.4839 -0.8735 -0.0001  0.0275  0.0878  0.7129  0.0044
 ```
 
 ------------------------------------------------------------------------
@@ -1019,15 +1024,19 @@ colnames(coef_df) <- c("variable", "alpha_true", "alpha_est",
                         "beta_true", "beta_est")
 print(coef_df, row.names = FALSE)
 #>  variable alpha_true alpha_est beta_true beta_est
-#>        x1        1.1     0.143       0.1    0.061
-#>        x2       -1.1    -0.173      -0.1    0.000
-#>        x3        0.1     0.007       1.1    0.233
-#>        x4       -0.1     0.000      -1.1   -0.123
-#>        x9        1.0     0.076       1.0    0.341
-#>       x10       -1.0    -0.104      -1.0   -0.364
+#>        x1        1.1     1.127       0.1    0.296
+#>        x2       -1.1    -1.122      -0.1   -0.055
+#>        x3        0.1     0.128       1.1    1.166
+#>        x4       -0.1    -0.048      -1.1   -1.168
+#>        x5        0.0     0.005       0.0    0.013
+#>        x6        0.0     0.004       0.0    0.000
+#>        x7        0.0     0.002       0.0    0.012
+#>        x8        0.0     0.001       0.0    0.069
+#>        x9        1.0     0.980       1.0    0.953
+#>       x10       -1.0    -1.008      -1.0   -0.918
 ```
 
-JFM alpha: TP=6 FP=0 FN=0 \| beta: TP=5 FP=0 FN=1
+JFM alpha: TP=6 FP=4 FN=0 \| beta: TP=6 FP=3 FN=0
 
 ``` r
 
@@ -1045,15 +1054,15 @@ colnames(coef_jscm) <- c("variable", "alpha_true", "alpha_est",
                           "beta_true", "beta_est")
 print(coef_jscm, row.names = FALSE)
 #>  variable alpha_true alpha_est beta_true beta_est
-#>        x1        1.1     1.258       0.1    0.132
-#>        x2       -1.1    -0.830      -0.1   -0.023
-#>        x3        0.1     0.371       1.1    1.927
-#>        x4       -0.1    -0.003      -1.1   -1.104
-#>        x5        0.0    -0.161       0.0   -0.341
-#>        x6        0.0     0.051       0.0    0.056
-#>        x7        0.0    -0.206       0.0   -0.441
-#>        x9        1.0     1.062       1.0    0.806
-#>       x10       -1.0    -1.036      -1.0   -1.917
+#>        x1        1.1     1.246       0.1    0.108
+#>        x2       -1.1    -0.821      -0.1   -0.018
+#>        x3        0.1     0.360       1.1    1.879
+#>        x4       -0.1    -0.004      -1.1   -0.954
+#>        x5        0.0    -0.152       0.0   -0.318
+#>        x6        0.0     0.054       0.0    0.092
+#>        x7        0.0    -0.199       0.0   -0.421
+#>        x9        1.0     1.055       1.0    0.773
+#>       x10       -1.0    -1.030      -1.0   -1.881
 ```
 
 JSCM alpha: TP=6 FP=3 FN=0 \| beta: TP=6 FP=3 FN=0

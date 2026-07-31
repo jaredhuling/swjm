@@ -17,7 +17,8 @@ cv_stagewise(
   pp = NULL,
   estimate_frailty = FALSE,
   ncores = 1L,
-  standardize = TRUE
+  standardize = TRUE,
+  lambda_min_ratio = NULL
 )
 ```
 
@@ -74,6 +75,14 @@ cv_stagewise(
 
   Logical. If `TRUE` (default), covariates are standardized before
   fitting (passed to `stagewise_fit`).
+
+- lambda_min_ratio:
+
+  Numeric. Passed to
+  [`stagewise_fit`](http://jaredhuling.org/swjm/reference/stagewise_fit.md)
+  for the full-data path; see there for the default. Fold fits are
+  stopped at the smallest lambda in `lambda_seq` regardless, so they
+  always cover the grid being scored.
 
 ## Value
 
@@ -133,9 +142,9 @@ cv_res
 #> 
 #>   Covariates (p):              10
 #>   Lambda grid size:            101
-#>   Best position (combined):    101  (lambda = 1.045)
-#>   Selected variables:          4 readmission, 5 death
-#>     Readmission (alpha): 2, 4, 9, 10
-#>     Death (beta):        2, 3, 4, 9, 10
+#>   Best position (combined):    101  (lambda = 0.6182)
+#>   Selected variables:          5 readmission, 6 death
+#>     Readmission (alpha): 1, 2, 4, 9, 10
+#>     Death (beta):        1, 2, 3, 4, 9, 10
 # }
 ```
