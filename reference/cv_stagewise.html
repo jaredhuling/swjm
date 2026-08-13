@@ -90,7 +90,12 @@ from a full-data stagewise fit.</p></dd>
 
 
 <dt id="arg-max-iter">max_iter<a class="anchor" aria-label="anchor" href="#arg-max-iter"></a></dt>
-<dd><p>Integer. Maximum iterations (passed to <code>stagewise_fit</code>).</p></dd>
+<dd><p>Integer. Maximum iterations (passed to <code>stagewise_fit</code>).
+A fold path cut off by this cap before reaching the smallest lambda in
+<code>lambda_seq</code> is automatically refit with a doubled budget (up to
+8 times <code>max_iter</code>), so out-of-fold scores at the tail of the grid
+come from interpolation on a completed path rather than extrapolation
+from a truncated one; a warning is issued if coverage still fails.</p></dd>
 
 
 <dt id="arg-pp">pp<a class="anchor" aria-label="anchor" href="#arg-pp"></a></dt>
@@ -117,8 +122,9 @@ standardized before fitting (passed to <code>stagewise_fit</code>).</p></dd>
 <dt id="arg-lambda-min-ratio">lambda_min_ratio<a class="anchor" aria-label="anchor" href="#arg-lambda-min-ratio"></a></dt>
 <dd><p>Numeric. Passed to <code><a href="stagewise_fit.html">stagewise_fit</a></code> for
 the full-data path; see there for the default. Fold fits are stopped at the
-smallest lambda in <code>lambda_seq</code> regardless, so they always cover the
-grid being scored.</p></dd>
+smallest lambda in <code>lambda_seq</code> regardless (with iteration-budget
+doubling as described under <code>max_iter</code>), so they cover the grid
+being scored.</p></dd>
 
 </dl></div>
     <div class="section level2">

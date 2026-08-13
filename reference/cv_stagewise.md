@@ -52,7 +52,12 @@ cv_stagewise(
 
 - max_iter:
 
-  Integer. Maximum iterations (passed to `stagewise_fit`).
+  Integer. Maximum iterations (passed to `stagewise_fit`). A fold path
+  cut off by this cap before reaching the smallest lambda in
+  `lambda_seq` is automatically refit with a doubled budget (up to 8
+  times `max_iter`), so out-of-fold scores at the tail of the grid come
+  from interpolation on a completed path rather than extrapolation from
+  a truncated one; a warning is issued if coverage still fails.
 
 - pp:
 
@@ -81,8 +86,9 @@ cv_stagewise(
   Numeric. Passed to
   [`stagewise_fit`](http://jaredhuling.org/swjm/reference/stagewise_fit.md)
   for the full-data path; see there for the default. Fold fits are
-  stopped at the smallest lambda in `lambda_seq` regardless, so they
-  always cover the grid being scored.
+  stopped at the smallest lambda in `lambda_seq` regardless (with
+  iteration-budget doubling as described under `max_iter`), so they
+  cover the grid being scored.
 
 ## Value
 

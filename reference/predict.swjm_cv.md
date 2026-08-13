@@ -128,6 +128,7 @@ dat_jscm <- generate_data(n = 50, p = 10, scenario = 1, model = "jscm")
 #> 
 cv_jscm  <- cv_stagewise(dat_jscm$data, model = "jscm", penalty = "coop",
                           max_iter = 500)
+#> Warning: 1 of 5 CV fold paths hit the iteration cap before covering the lambda grid, even after the budget was raised to 8x max_iter; out-of-fold scores at the smallest lambdas are extrapolated from truncated paths. Increase max_iter.
 pred_jscm <- predict(cv_jscm, newdata = newz)
 plot(pred_jscm)
 
