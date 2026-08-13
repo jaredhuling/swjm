@@ -35,7 +35,12 @@ from a full-data stagewise fit.}
 
 \item{eps}{Numeric. Step size (passed to \code{stagewise_fit}).}
 
-\item{max_iter}{Integer. Maximum iterations (passed to \code{stagewise_fit}).}
+\item{max_iter}{Integer. Maximum iterations (passed to \code{stagewise_fit}).
+A fold path cut off by this cap before reaching the smallest lambda in
+\code{lambda_seq} is automatically refit with a doubled budget (up to
+8 times \code{max_iter}), so out-of-fold scores at the tail of the grid
+come from interpolation on a completed path rather than extrapolation
+from a truncated one; a warning is issued if coverage still fails.}
 
 \item{pp}{Integer. Early-stop block size (passed to \code{stagewise_fit}).}
 
@@ -52,8 +57,9 @@ standardized before fitting (passed to \code{stagewise_fit}).}
 
 \item{lambda_min_ratio}{Numeric. Passed to \code{\link{stagewise_fit}} for
 the full-data path; see there for the default. Fold fits are stopped at the
-smallest lambda in \code{lambda_seq} regardless, so they always cover the
-grid being scored.}
+smallest lambda in \code{lambda_seq} regardless (with iteration-budget
+doubling as described under \code{max_iter}), so they cover the grid
+being scored.}
 }
 \value{
 An object of class \code{"swjm_cv"}, a list with components:

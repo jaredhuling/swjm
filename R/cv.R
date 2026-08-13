@@ -18,6 +18,11 @@
 #'   from a full-data stagewise fit.
 #' @param eps Numeric. Step size (passed to \code{stagewise_fit}).
 #' @param max_iter Integer. Maximum iterations (passed to \code{stagewise_fit}).
+#'   A fold path cut off by this cap before reaching the smallest lambda in
+#'   \code{lambda_seq} is automatically refit with a doubled budget (up to
+#'   8 times \code{max_iter}), so out-of-fold scores at the tail of the grid
+#'   come from interpolation on a completed path rather than extrapolation
+#'   from a truncated one; a warning is issued if coverage still fails.
 #' @param pp Integer. Early-stop block size (passed to \code{stagewise_fit}).
 #' @param estimate_frailty Logical. For JFM only: if \code{TRUE}, estimates
 #'   the frailty variance and uses frailty weights in the estimating equations
@@ -27,8 +32,9 @@
 #'   PSOCK cluster, which works on all platforms including Windows.
 #' @param lambda_min_ratio Numeric. Passed to \code{\link{stagewise_fit}} for
 #'   the full-data path; see there for the default. Fold fits are stopped at the
-#'   smallest lambda in \code{lambda_seq} regardless, so they always cover the
-#'   grid being scored.
+#'   smallest lambda in \code{lambda_seq} regardless (with iteration-budget
+#'   doubling as described under \code{max_iter}), so they cover the grid
+#'   being scored.
 #' @param standardize Logical. If \code{TRUE} (default), covariates are
 #'   standardized before fitting (passed to \code{stagewise_fit}).
 #'
@@ -278,6 +284,48 @@ summary.swjm_cv <- function(object, ...) {
 
 
 # --------------------------------------------------------------------------
+# Fold path fitting with grid-coverage retries
+# --------------------------------------------------------------------------
+# A fold's training path must reach the smallest lambda in lambda_seq for
+# the out-of-fold scores at the tail of the grid to be interpolated rather
+# than extrapolated from a truncated path. A fold path that terminates by
+# its own criterion (the lambda floor or the stuck-coordinate early stop)
+# is final; but one cut off by the iteration cap before covering the grid
+# is refit with a doubled budget, up to 8 times the requested cap.
+# fit_fn takes the iteration budget and returns a stagewise_jfm/jscm list.
+
+#' @keywords internal
+.fold_path_with_coverage <- function(fit_fn, iter, lambda_seq) {
+  iter_fold <- iter
+  repeat {
+    results_tr <- fit_fn(iter_fold)
+    dec_idx <- extract_decreasing_indices(results_tr$lambda)
+    lam_dec <- results_tr$lambda[dec_idx]
+    covered <- min(lam_dec) <= min(lambda_seq)
+    if (covered || results_tr$stop_reason != "max_iter" ||
+        iter_fold >= 8L * iter) break
+    iter_fold <- 2L * iter_fold
+  }
+  list(results_tr = results_tr, dec_idx = dec_idx,
+       uncovered_at_cap = !covered && results_tr$stop_reason == "max_iter")
+}
+
+# Warn once if any fold path could not cover the lambda grid.
+#' @keywords internal
+.warn_uncovered_folds <- function(theta_lambda_list, K) {
+  n_uncov <- sum(vapply(theta_lambda_list, function(m)
+    isTRUE(attr(m, "fold_grid_uncovered")), logical(1)))
+  if (n_uncov > 0) {
+    warning(n_uncov, " of ", K, " CV fold paths hit the iteration cap ",
+            "before covering the lambda grid, even after the budget was ",
+            "raised to 8x max_iter; out-of-fold scores at the smallest ",
+            "lambdas are extrapolated from truncated paths. Increase ",
+            "max_iter.", call. = FALSE)
+  }
+  invisible(NULL)
+}
+
+# --------------------------------------------------------------------------
 # Parallel fold dispatch helper
 # --------------------------------------------------------------------------
 
@@ -329,28 +377,34 @@ cv_jfm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
     rownames(Data2_tr) <- seq_len(nrow(Data2_tr))
     Data2_tr$id <- match(Data2_tr$id, unique(Data2_tr$id))
 
-    results_tr <- stagewise_jfm(initial_alpha, initial_beta, Data2_tr,
-                                penalty, eps1, adap, eps2, iter, pp,
-                                estimate_frailty = estimate_frailty,
-                                lambda_min_ratio = lambda_min_ratio)
+    fp <- .fold_path_with_coverage(function(it)
+      stagewise_jfm(initial_alpha, initial_beta, Data2_tr,
+                    penalty, eps1, adap, eps2, it, pp,
+                    estimate_frailty = estimate_frailty,
+                    lambda_min_ratio = lambda_min_ratio),
+      iter, lambda_seq)
+    results_tr <- fp$results_tr
 
     lambda_seq_tr <- results_tr$lambda
     theta_tr <- results_tr$theta_update
-    dec_idx <- extract_decreasing_indices(lambda_seq_tr)
+    dec_idx <- fp$dec_idx
     lambda_seq_tr_ordered <- lambda_seq_tr[dec_idx]
     theta_tr_ordered <- theta_tr[, dec_idx, drop = FALSE]
 
     lamlist <- lambda_interp(lambda_seq_tr_ordered, lambda_seq)
-    as.matrix(
+    out <- as.matrix(
       theta_tr_ordered[, lamlist$left, drop = FALSE] %*%
         Matrix::Diagonal(x = lamlist$frac) +
         theta_tr_ordered[, lamlist$right, drop = FALSE] %*%
         Matrix::Diagonal(x = 1 - lamlist$frac)
     )
+    attr(out, "fold_grid_uncovered") <- fp$uncovered_at_cap
+    out
   }
 
   # Run fold training (parallel if ncores > 1)
   theta_lambda_list <- .run_folds(seq_len(K), .train_fold, ncores)
+  .warn_uncovered_folds(theta_lambda_list, K)
 
   # Cross-fitted EE evaluation on full data
   dc <- extract_data_components(Data2)
@@ -475,24 +529,31 @@ cv_jscm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
     rownames(Data2_tr) <- seq_len(nrow(Data2_tr))
     Data2_tr$id <- match(Data2_tr$id, unique(Data2_tr$id))
 
-    results_tr <- stagewise_jscm(initial_alpha, initial_beta, Data2_tr,
-                                 penalty, eps1, adap, eps2, iter, pp,
-                                 lambda_min_ratio = lambda_min_ratio)
+    fp <- .fold_path_with_coverage(function(it)
+      stagewise_jscm(initial_alpha, initial_beta, Data2_tr,
+                     penalty, eps1, adap, eps2, it, pp,
+                     lambda_min_ratio = lambda_min_ratio),
+      iter, lambda_seq)
+    results_tr <- fp$results_tr
+
     lambda_seq_tr <- results_tr$lambda
     theta_tr <- results_tr$theta_update
-    dec_idx <- extract_decreasing_indices(lambda_seq_tr)
+    dec_idx <- fp$dec_idx
     lambda_seq_tr_ordered <- lambda_seq_tr[dec_idx]
     theta_tr_ordered <- theta_tr[, dec_idx, drop = FALSE]
     lamlist <- lambda_interp(lambda_seq_tr_ordered, lambda_seq)
-    as.matrix(
+    out <- as.matrix(
       theta_tr_ordered[, lamlist$left, drop = FALSE] %*%
         Matrix::Diagonal(x = lamlist$frac) +
         theta_tr_ordered[, lamlist$right, drop = FALSE] %*%
         Matrix::Diagonal(x = 1 - lamlist$frac)
     )
+    attr(out, "fold_grid_uncovered") <- fp$uncovered_at_cap
+    out
   }
 
   theta_lambda_list <- .run_folds(seq_len(K), .train_fold_jscm, ncores)
+  .warn_uncovered_folds(theta_lambda_list, K)
 
   count_re <- 0L
   count_cen <- 0L
