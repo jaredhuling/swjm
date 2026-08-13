@@ -47,6 +47,13 @@
 #' @return An object of class \code{"swjm_path"}, a list with components:
 #'   \describe{
 #'     \item{k}{Number of iterations performed.}
+#'     \item{stop_reason}{Character, why the path terminated:
+#'       \code{"max_iter"} (ran to the iteration cap),
+#'       \code{"early_stop"} (a single coordinate dominated every update in
+#'       the last \code{pp} iterations), or \code{"lambda_min_ratio"} (the
+#'       dual norm fell below \code{lambda_min_ratio} times its initial
+#'       value).}
+#'     \item{max_iter}{Integer, the iteration cap used for the fit.}
 #'     \item{theta}{Matrix of coefficient paths (\code{2p} rows by
 #'       \code{k+1} columns).}
 #'     \item{lambda}{Numeric vector of penalty parameter approximations
@@ -145,6 +152,8 @@ stagewise_fit <- function(data, model = c("jfm", "jscm"),
   structure(
     list(
       k = result$k,
+      stop_reason = result$stop_reason,
+      max_iter = max_iter,
       theta = theta_rescaled,
       alpha = theta_rescaled[1:p, , drop = FALSE],
       beta  = theta_rescaled[(p + 1):(2 * p), , drop = FALSE],
@@ -383,6 +392,7 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
 
   AA <- integer(0)
   lam0 <- NA_real_
+  stop_reason <- "max_iter"
 
   while (k < iter) {
     thetak <- thetaK
@@ -443,13 +453,19 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
     # static -- the remaining iterations contribute a negligible fraction of
     # the total movement -- so continuing only costs time and inflates the
     # lambda grid that cross-validation must search.
-    if (is.finite(lam0) && lambda_val < lambda_min_ratio * lam0) break
+    if (is.finite(lam0) && lambda_val < lambda_min_ratio * lam0) {
+      stop_reason <- "lambda_min_ratio"
+      break
+    }
 
     # Early stop check: stop only if a single coordinate dominates every step
     # in the last pp iterations (truly stuck), not merely if two variables
     # alternate.
     if (k %% pp == 0) {
-      if (length(unique(AA)) <= 1L) break
+      if (length(unique(AA)) <= 1L) {
+        stop_reason <- "early_stop"
+        break
+      }
       AA <- integer(0)
     }
   }
@@ -462,6 +478,7 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
   idx_keep <- seq_len(k + 1)
   list(
     k = k,
+    stop_reason = stop_reason,
     normK_update = normK_update[idx_keep],
     theta_update = theta_update[, idx_keep, drop = FALSE],
     norm2_g1_update = norm2_g1_update[idx_keep],
@@ -553,6 +570,7 @@ stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
 
   AA <- integer(0)
   lam0 <- NA_real_
+  stop_reason <- "max_iter"
 
   while (k < iter) {
     thetak <- thetaK
@@ -606,13 +624,19 @@ stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
     # static -- the remaining iterations contribute a negligible fraction of
     # the total movement -- so continuing only costs time and inflates the
     # lambda grid that cross-validation must search.
-    if (is.finite(lam0) && lambda_val < lambda_min_ratio * lam0) break
+    if (is.finite(lam0) && lambda_val < lambda_min_ratio * lam0) {
+      stop_reason <- "lambda_min_ratio"
+      break
+    }
 
     # Early stop check: stop only if a single coordinate dominates every step
     # in the last pp iterations (truly stuck), not merely if two variables
     # alternate.
     if (k %% pp == 0) {
-      if (length(unique(AA)) <= 1L) break
+      if (length(unique(AA)) <= 1L) {
+        stop_reason <- "early_stop"
+        break
+      }
       AA <- integer(0)
     }
   }
@@ -625,6 +649,7 @@ stagewise_jscm <- function(initial_alpha, initial_beta, Data2, penalty,
   idx_keep <- seq_len(k + 1)
   list(
     k = k,
+    stop_reason = stop_reason,
     normK_update = normK_update[idx_keep],
     theta_update = theta_update[, idx_keep, drop = FALSE],
     norm2_g1_update = norm2_g1_update[idx_keep],

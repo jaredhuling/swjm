@@ -63,6 +63,13 @@ time without changing the fit. If \code{NULL}, defaults to 0.01 when
 An object of class \code{"swjm_path"}, a list with components:
 \describe{
 \item{k}{Number of iterations performed.}
+\item{stop_reason}{Character, why the path terminated:
+\code{"max_iter"} (ran to the iteration cap),
+\code{"early_stop"} (a single coordinate dominated every update in
+the last \code{pp} iterations), or \code{"lambda_min_ratio"} (the
+dual norm fell below \code{lambda_min_ratio} times its initial
+value).}
+\item{max_iter}{Integer, the iteration cap used for the fit.}
 \item{theta}{Matrix of coefficient paths (\code{2p} rows by
 \code{k+1} columns).}
 \item{lambda}{Numeric vector of penalty parameter approximations
