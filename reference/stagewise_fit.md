@@ -89,6 +89,17 @@ An object of class `"swjm_path"`, a list with components:
 
   Number of iterations performed.
 
+- stop_reason:
+
+  Character, why the path terminated: `"max_iter"` (ran to the iteration
+  cap), `"early_stop"` (a single coordinate dominated every update in
+  the last `pp` iterations), or `"lambda_min_ratio"` (the dual norm fell
+  below `lambda_min_ratio` times its initial value).
+
+- max_iter:
+
+  Integer, the iteration cap used for the fit.
+
 - theta:
 
   Matrix of coefficient paths (`2p` rows by `k+1` columns).

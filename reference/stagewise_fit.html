@@ -130,6 +130,17 @@ time without changing the fit. If <code>NULL</code>, defaults to 0.01 when
     <p>An object of class <code>"swjm_path"</code>, a list with components:</p><dl><dt>k</dt>
 <dd><p>Number of iterations performed.</p></dd>
 
+<dt>stop_reason</dt>
+<dd><p>Character, why the path terminated:
+<code>"max_iter"</code> (ran to the iteration cap),
+<code>"early_stop"</code> (a single coordinate dominated every update in
+the last <code>pp</code> iterations), or <code>"lambda_min_ratio"</code> (the
+dual norm fell below <code>lambda_min_ratio</code> times its initial
+value).</p></dd>
+
+<dt>max_iter</dt>
+<dd><p>Integer, the iteration cap used for the fit.</p></dd>
+
 <dt>theta</dt>
 <dd><p>Matrix of coefficient paths (<code>2p</code> rows by
 <code>k+1</code> columns).</p></dd>
