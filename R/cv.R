@@ -335,12 +335,28 @@ summary.swjm_cv <- function(object, ...) {
   K <- length(fold_ids)
   if (ncores > 1L && K > 1L) {
     nc <- min(ncores, K)
-    cl <- parallel::makeCluster(nc)
-    on.exit(parallel::stopCluster(cl), add = TRUE)
-    parallel::clusterEvalQ(cl, library(swjm))
-    parallel::clusterExport(cl, ls(environment(train_fn)),
-                             envir = environment(train_fn))
-    parallel::parLapply(cl, fold_ids, train_fn)
+    if (.Platform$OS.type == "unix") {
+      # Fork-based parallelism: no server sockets (a PSOCK cluster binds a
+      # port, and concurrent jobs on one cluster node can collide on it),
+      # and the fold data are shared copy-on-write instead of being
+      # serialized to each worker.
+      res <- parallel::mclapply(fold_ids, train_fn, mc.cores = nc)
+      failed <- vapply(res, inherits, logical(1), "try-error")
+      if (any(failed)) {
+        stop("CV fold training failed in ", sum(failed), " of ", K,
+             " forked workers: ",
+             conditionMessage(attr(res[[which(failed)[1]]], "condition")),
+             call. = FALSE)
+      }
+      res
+    } else {
+      cl <- parallel::makeCluster(nc)
+      on.exit(parallel::stopCluster(cl), add = TRUE)
+      parallel::clusterEvalQ(cl, library(swjm))
+      parallel::clusterExport(cl, ls(environment(train_fn)),
+                               envir = environment(train_fn))
+      parallel::parLapply(cl, fold_ids, train_fn)
+    }
   } else {
     lapply(fold_ids, train_fn)
   }
