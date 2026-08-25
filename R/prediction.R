@@ -14,8 +14,13 @@
 # times and using each subject's accelerated follow-up time as the censoring
 # boundary for the risk set.
 .jscm_baseline <- function(data, alpha, beta) {
-  p        <- sum(startsWith(names(data), "x"))
-  cov_cols <- paste0("x", seq_len(p))
+  # Covariates are columns 6 onward, which is the layout every entry point in
+  # the package requires. Identifying them by position rather than by an
+  # "x1", ..., "xp" naming convention matters for data whose covariates carry
+  # their own names: the name-based form silently found no covariates and
+  # failed with "undefined columns selected".
+  p        <- ncol(data) - 5L
+  cov_cols <- 6:ncol(data)
 
   # Per-subject row (first occurrence) — covariates are time-invariant
   sub_rows <- !duplicated(data$id)

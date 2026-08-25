@@ -342,6 +342,19 @@ generate_data_jfm <- function(n, p, scenario = 1, b = 6.50,
 #' @export
 generate_data_jscm <- function(n, p, scenario = 1, b = 4) {
   S <- scenario
+
+  # The scenarios below place their nonzero coefficients at fixed positions
+  # within the first ten covariates, so p must leave room for them. With a
+  # smaller p, assigning position 10 would silently extend the coefficient
+  # vector past the covariate matrix, and the mismatch would surface much
+  # later as an opaque message from reReg::simGSC about alpha not matching
+  # the number of covariates.
+  if (p < 10) {
+    stop("'p' must be at least 10 for the joint scale-change scenarios, ",
+         "which place their nonzero coefficients within the first ten ",
+         "covariates (got p = ", p, ").", call. = FALSE)
+  }
+
   alpha.star <- numeric(p)
   beta.star  <- numeric(p)
 

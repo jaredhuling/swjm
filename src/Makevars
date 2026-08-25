@@ -4,4 +4,17 @@
 # 320 elements, capped at 8 threads).  The vectors here are small and the work
 # per expression is tiny, so that spawned parallel regions whose fork/join and
 # spin-wait cost dominated the arithmetic.
+#
+# Omitting -fopenmp here is not enough to keep those regions from appearing.
+# A user-level ~/.R/Makevars that puts -fopenmp in CXXFLAGS or CXX17FLAGS,
+# as a Homebrew GCC toolchain on macOS commonly does, applies to this package
+# too and defines _OPENMP anyway.  Armadillo then parallelises, and the
+# consequence reaches well beyond the wasted arithmetic: cv_stagewise() fits
+# its folds in forked worker processes, and a process that has already run an
+# OpenMP region leaves a thread pool that a forked child cannot use, so the
+# child waits on its first parallel region and never returns.  Defining
+# ARMA_DONT_USE_OPENMP holds Armadillo to a single thread whatever the
+# compiler flags say, which is what this file intended in the first place and
+# what makes forking the folds safe.
+PKG_CPPFLAGS = -DARMA_DONT_USE_OPENMP
 PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
