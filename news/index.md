@@ -2,6 +2,37 @@
 
 ## swjm 0.1.3
 
+- The full joint frailty model (`estimate_frailty = TRUE`) now estimates
+  the frailty variance. It was previously held at 1. The variance is
+  updated at each path iteration by the closed-form solution of the
+  estimating equation of Kalbfleisch et al. (2013, eq. 15), with the
+  frailty weights held at their current values, and is returned as
+  `frailty_var` by
+  [`stagewise_fit()`](http://jaredhuling.org/swjm/reference/stagewise_fit.md)
+  and
+  [`cv_stagewise()`](http://jaredhuling.org/swjm/reference/cv_stagewise.md).
+
+- The frailty weights are predictable, `1 / (1 + theta * Lambda^D(t-))`,
+  and the death baseline is solved exactly in time order given those
+  weights.
+
+- Fixed the weighted recurrence risk sets, in which a subject’s weight
+  reset to 1 after each recurrence until the next death time.
+
+- [`cv_stagewise()`](http://jaredhuling.org/swjm/reference/cv_stagewise.md)
+  scores held-out folds of the full model with the frailty-weighted
+  estimating equations, using each fold’s coefficients and frailty
+  variance.
+
+- [`generate_data()`](http://jaredhuling.org/swjm/reference/generate_data.md)
+  (JFM, `cov_type = "fixed"` or `"external"`) no longer drops a censored
+  subject’s last recurrence. New argument `cov_scale` sets the covariate
+  standard deviation.
+
+- The frailty-weighted passes track only the scalar risk-set sum and
+  form the score with one matrix product, so their cost per death time
+  is O(n) rather than O(n p).
+
 - Fixed the adaptive step-size rule. The step was previously derived
   from `count_digits()`, which counted decimal places rather than
   magnitude. Two consequences: a dual norm of 1.27 was scored like 0.5
@@ -12,13 +43,17 @@
   it printed in scientific notation, `count_digits()` returned 0, and
   the step jumped back to 0.1, preventing the path from descending below
   lambda = 1e-4 at any iteration count.
+
 - The step now starts at `eps` at the top of the path and is divided by
   ten each time the dual norm falls a further decade below its initial
   value. The rule is scale invariant and penalty independent.
+
 - `eps` is now used. It was previously discarded by the adaptive branch
   for both model types and all three penalties, so the documented
   step-size argument had no effect.
+
 - Removed `count_digits()`, which is no longer used.
+
 - [`stagewise_fit()`](http://jaredhuling.org/swjm/reference/stagewise_fit.md)
   and
   [`cv_stagewise()`](http://jaredhuling.org/swjm/reference/cv_stagewise.md)

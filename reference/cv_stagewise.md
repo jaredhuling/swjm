@@ -65,9 +65,11 @@ cv_stagewise(
 
 - estimate_frailty:
 
-  Logical. For JFM only: if `TRUE`, estimates the frailty variance and
-  uses frailty weights in the estimating equations (passed to
-  `stagewise_fit`).
+  Logical. For JFM only: if `TRUE`, fits the full joint frailty model
+  (passed to `stagewise_fit`), and the cross-validation criterion
+  evaluates the frailty-weighted estimating equations, each subject
+  using the coefficients and estimated frailty variance of the fold in
+  which it was held out.
 
 - ncores:
 

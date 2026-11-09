@@ -14,7 +14,8 @@ generate_data_jfm(
   lambda0_d = 0.041,
   lambda0_r = 1,
   gamma_frailty = 0,
-  cov_type = c("internal", "external", "fixed")
+  cov_type = c("internal", "external", "fixed"),
+  cov_scale = 1
 )
 ```
 
@@ -59,6 +60,14 @@ generate_data_jfm(
   changes covariates at predetermined Poisson times independent of the
   event process (Kalbfleisch-compatible); `"fixed"` draws one covariate
   vector per subject that never changes.
+
+- cov_scale:
+
+  Numeric. Standard deviation of the normal covariate draws (default 1).
+  With `cov_type = "fixed"` each subject keeps one linear predictor for
+  the whole follow-up, so the scenario coefficients combined with
+  unit-variance covariates give some subjects extremely high recurrence
+  rates; a smaller scale keeps the event counts realistic.
 
 ## Value
 

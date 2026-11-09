@@ -58,10 +58,17 @@ stagewise_fit(
 
 - estimate_frailty:
 
-  Logical. For JFM only: if `TRUE`, estimates the frailty variance and
-  uses the Kalbfleisch et al. (2013) frailty weights \\w_i(t)\\ in the
-  estimating equations. If `FALSE` (default), uses unit weights
-  (simplified model without frailty).
+  Logical. For JFM only: if `TRUE`, fits the full joint frailty model
+  with a gamma frailty of unknown variance, using the frailty weights
+  \\w_i(t)\\ of Kalbfleisch et al. (2013) in the estimating equations.
+  The variance is estimated from their estimating equation (15): it is
+  first iterated to convergence at the initial coefficients and then
+  updated once per stagewise iteration. The weights at time \\t\\ use
+  the cumulative death hazard just before \\t\\. Kalbfleisch et al.
+  assume external covariates; covariates whose path depends on the
+  recurrent-event history (for example, covariates redrawn at each
+  recurrence) make the variance estimate inconsistent. If `FALSE`
+  (default), uses unit weights (simplified model without frailty).
 
 - standardize:
 
@@ -119,6 +126,12 @@ An object of class `"swjm_path"`, a list with components:
 - penalty:
 
   Character, the penalty used.
+
+- frailty_var:
+
+  Numeric vector of the estimated frailty variance at each iteration
+  (full joint frailty model); 0 for the simplified model and `NULL` for
+  the JSCM.
 
 ## Examples
 
