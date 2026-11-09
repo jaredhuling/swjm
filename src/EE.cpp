@@ -586,7 +586,8 @@ Rcpp::List jfm_precompute_timeline(
 // wt_update_times: n_wt sorted times where weights change (typically death times)
 // query_before_enter: same as jfm_precompute_timeline
 //
-// WEIGHT_UPDATE priority: processed just before QUERYs (so queries see updated weights)
+// WEIGHT_UPDATE priority: processed just after QUERYs at a tied time (so a
+// query at time t sees the weights in effect just before t)
 //
 // [[Rcpp::export(rng = false)]]
 Rcpp::List jfm_precompute_timeline_wt(
@@ -607,21 +608,24 @@ Rcpp::List jfm_precompute_timeline_wt(
   std::vector<int>    tl_type(total);
   std::vector<int>    tl_idx(total);
 
-  // Priority assignments:
-  //   death (qbe=0): EXIT_nonlast(0) < ENTER(1) < WT_UPDATE(2) < QUERY(3) < EXIT_last(4)
-  //   recur (qbe=1): WT_UPDATE(0) < QUERY(1) < EXIT_nonlast(2) < ENTER(3) < EXIT_last(4)
+  // Priority assignments. WT_UPDATE follows QUERY at a tied time, so a query
+  // at time t sees the weights w_i(t) = 1 / {1 + theta * Lambda_i^D(t-)}, which
+  // use only the death-time baseline jumps strictly before t (the weight is the
+  // conditional mean of the frailty given survival up to, not through, t).
+  //   death (qbe=0): EXIT_nonlast(0) < ENTER(1) < QUERY(2) < WT_UPDATE(3) < EXIT_last(4)
+  //   recur (qbe=1): QUERY(0) < WT_UPDATE(1) < EXIT_nonlast(2) < ENTER(3) < EXIT_last(4)
   int prio_enter, prio_query, prio_exit_nonlast, prio_exit_last, prio_wt;
   if (query_before_enter) {
-    prio_wt           = 0;
-    prio_query        = 1;
+    prio_query        = 0;
+    prio_wt           = 1;
     prio_exit_nonlast = 2;
     prio_enter        = 3;
     prio_exit_last    = 4;
   } else {
     prio_exit_nonlast = 0;
     prio_enter        = 1;
-    prio_wt           = 2;
-    prio_query        = 3;
+    prio_query        = 2;
+    prio_wt           = 3;
     prio_exit_last    = 4;
   }
 
@@ -829,40 +833,44 @@ Rcpp::List jfm_s0s1_fast_cf_cpp(
 // time where weights change.  At these events the function recomputes all
 // active entries' contributions using the new weights from wt_subj.
 //
+// The current weight is tracked per SUBJECT, not per pseudo-entry: when a
+// subject's covariate row changes (EXIT of the old entry followed by ENTER of
+// the new one at the same time), the new entry takes the subject's current
+// weight. (Earlier versions read the weight from the subject's active entry,
+// which the preceding EXIT had already cleared, so the new entry restarted at
+// weight 1 until the next death time.)
+//
 // tl_type, tl_idx: sorted timeline (types: 0/3=EXIT, 1=ENTER, 2=QUERY, 4=WEIGHT_UPDATE)
 // tl_size: length of timeline
 // Z_pseudo: n_pseudo × p covariate matrix
 // entry_subject: n_pseudo int, 0-based subject index for each pseudo-entry
-// coef: p-vector
+// exp_lp: n_pseudo vector exp(z_j' coef) (coef may differ by entry, e.g. by CV fold)
 // wt_subj: n × n_wt weight matrix (subjects × weight-update times, column-major)
 //          At weight-update event with index k, subject i's new weight is wt_subj(i, k).
 // ne: number of QUERY events (output size)
 // n: number of subjects
 //
 // Returns list(S0t = ne-vec, S1t = p × ne matrix), divided by n.
-//
-// [[Rcpp::export(rng = false)]]
-Rcpp::List jfm_s0s1_wt_fast_cpp(
+static Rcpp::List jfm_s0s1_wt_core(
     const Rcpp::IntegerVector& tl_type,
     const Rcpp::IntegerVector& tl_idx,
     int tl_size,
     const arma::mat& Z_pseudo,
     const Rcpp::IntegerVector& entry_subject,
-    const arma::vec& coef,
+    const arma::vec& exp_lp,
     const arma::mat& wt_subj,
     int ne,
     int n
 ) {
-  arma::uword p     = coef.n_elem;
+  arma::uword p     = Z_pseudo.n_cols;
   arma::uword nrows = Z_pseudo.n_rows;
   arma::uword npseudo = nrows;
   arma::uword nsub  = (arma::uword)n;
 
-  // Precompute exp(z' coef) for every pseudo-entry
-  arma::vec exp_lp = arma::exp(Z_pseudo * coef);
-
-  // Per-entry current weight (initialised to 1; updated at WEIGHT_UPDATE events)
+  // Weight with which each pseudo-entry currently enters the running sums
   arma::vec entry_wt(npseudo, arma::fill::ones);
+  // Current weight of each subject (1 before the first death time)
+  arma::vec subj_wt(nsub, arma::fill::ones);
 
   // Track which pseudo-entry is currently active for each subject (-1 = none)
   std::vector<int> active_entry(nsub, -1);
@@ -880,12 +888,9 @@ Rcpp::List jfm_s0s1_wt_fast_cpp(
     int idx  = tl_idx[i];
 
     if (type == 1) {
-      // ENTER: add pseudo-entry contribution with current weight
+      // ENTER: add pseudo-entry contribution with the subject's current weight
       int subj = entry_subject[idx];
-      entry_wt(idx) = (active_entry[subj] >= 0) ?
-                       entry_wt(active_entry[subj]) : 1.0;
-      // If subject already had an active entry, the EXIT for that entry
-      // should have been processed already (priority ordering ensures this)
+      entry_wt(idx) = subj_wt(subj);
       active_entry[subj] = idx;
       double e = entry_wt(idx) * exp_lp(idx);
       run_s0 += e;
@@ -905,16 +910,16 @@ Rcpp::List jfm_s0s1_wt_fast_cpp(
 
     } else if (type == 4) {
       // WEIGHT_UPDATE: idx is the column index into wt_subj.
-      // Recompute all active entries' contributions with new weights.
-      // Reset running sums and recompute from active entries.
+      // Update every subject's weight and rebuild the running sums from the
+      // active entries.
       run_s0 = 0.0;
       run_s1.zeros();
       for (arma::uword s = 0; s < nsub; s++) {
+        subj_wt(s) = wt_subj(s, idx);
         int ae = active_entry[s];
         if (ae < 0) continue;
-        double new_w = wt_subj(s, idx);
-        entry_wt(ae) = new_w;
-        double e = new_w * exp_lp(ae);
+        entry_wt(ae) = subj_wt(s);
+        double e = entry_wt(ae) * exp_lp(ae);
         run_s0 += e;
         const double* zk = Z_pseudo.memptr() + ae;
         for (arma::uword l = 0; l < p; l++)
@@ -934,6 +939,41 @@ Rcpp::List jfm_s0s1_wt_fast_cpp(
     Rcpp::Named("S0t") = Rcpp::NumericVector(s0t_out.begin(), s0t_out.end()),
     Rcpp::Named("S1t") = S1t * inv_n
   );
+}
+
+// [[Rcpp::export(rng = false)]]
+Rcpp::List jfm_s0s1_wt_fast_cpp(
+    const Rcpp::IntegerVector& tl_type,
+    const Rcpp::IntegerVector& tl_idx,
+    int tl_size,
+    const arma::mat& Z_pseudo,
+    const Rcpp::IntegerVector& entry_subject,
+    const arma::vec& coef,
+    const arma::mat& wt_subj,
+    int ne,
+    int n
+) {
+  arma::vec exp_lp = arma::exp(Z_pseudo * coef);
+  return jfm_s0s1_wt_core(tl_type, tl_idx, tl_size, Z_pseudo, entry_subject,
+                          exp_lp, wt_subj, ne, n);
+}
+
+// Same as jfm_s0s1_wt_fast_cpp but takes exp(linear predictor) per pseudo-entry,
+// so cross-fitting can use fold-specific coefficients.
+// [[Rcpp::export(rng = false)]]
+Rcpp::List jfm_s0s1_wt_lp_cpp(
+    const Rcpp::IntegerVector& tl_type,
+    const Rcpp::IntegerVector& tl_idx,
+    int tl_size,
+    const arma::mat& Z_pseudo,
+    const Rcpp::IntegerVector& entry_subject,
+    const arma::vec& exp_lp,
+    const arma::mat& wt_subj,
+    int ne,
+    int n
+) {
+  return jfm_s0s1_wt_core(tl_type, tl_idx, tl_size, Z_pseudo, entry_subject,
+                          exp_lp, wt_subj, ne, n);
 }
 
 
@@ -1344,5 +1384,428 @@ Rcpp::List jfm_build_pseudo_cpp(
     Rcpp::Named("n") = (int)n,
     Rcpp::Named("n_D") = (int)n_D,
     Rcpp::Named("n_R") = (int)n_R
+  );
+}
+
+
+// ==================== Full joint frailty model: frailty variance ====================
+//
+// Death sub-model of the full joint frailty model in one forward pass.
+//
+// Weights are predictable: at time t the weight of subject s is
+//   w_s(t) = 1 / {1 + theta_s * Lambda_s^D(t-)},
+// Lambda_s^D(t-) = sum over death times u < t of exp(z_s(u)' beta) dLambda_0^D(u)
+// (Kalbfleisch, Schaubel, Ye and Gong, 2013, Biometrics, eq. 9). Because the
+// weights at a death time use only the baseline jumps at earlier death times,
+// the weighted Breslow equations U4 can be solved exactly in time order: at each
+// distinct death time, S0 is computed with the current weights, each of the d
+// tied deaths there receives the jump 1 / (n S0), so the total jump is d / (n S0),
+// and then every subject's cumulative hazard and weight are advanced.
+//
+// tl_type, tl_idx, tl_size: plain death timeline from
+//   jfm_precompute_timeline(entry, exit, is_last, td_sorted, 0)
+// exp_lp: n_pseudo vector exp(z_j' beta) (beta may differ by entry, e.g. by CV fold)
+// theta_subj: n vector of frailty variances (one value, or fold-specific in CV)
+// td_sorted: n_D sorted death times (QUERY k refers to td_sorted[k])
+//
+// Returns list(S0t, S1t: weighted risk-set sums at each death, divided by n;
+//              lambda0_d: baseline jump per sorted death entry;
+//              wt_pre:  n x n_D weights at t_k- (used at death time k);
+//              wt_post: n x n_D weights just after t_k, for the recurrence
+//                       timeline, whose WEIGHT_UPDATE k applies on (t_k, t_{k+1}]).
+//
+// [[Rcpp::export(rng = false)]]
+Rcpp::List jfm_death_forward_cpp(
+    const Rcpp::IntegerVector& tl_type,
+    const Rcpp::IntegerVector& tl_idx,
+    int tl_size,
+    const arma::mat& Z_pseudo,
+    const Rcpp::IntegerVector& entry_subject,
+    const arma::vec& exp_lp,
+    const arma::vec& theta_subj,
+    const arma::vec& td_sorted,
+    int n
+) {
+  arma::uword p     = Z_pseudo.n_cols;
+  arma::uword nrows = Z_pseudo.n_rows;
+  arma::uword nsub  = (arma::uword)n;
+  arma::uword nD    = td_sorted.n_elem;
+
+  arma::vec cumhaz(nsub, arma::fill::zeros);   // Lambda_s^D through processed death times
+  arma::vec subj_wt(nsub, arma::fill::ones);
+  arma::vec entry_wt(nrows, arma::fill::ones);
+  std::vector<int> active_entry(nsub, -1);
+
+  double run_s0 = 0.0;
+  arma::vec run_s1(p, arma::fill::zeros);
+
+  arma::vec S0t(nD, arma::fill::zeros);
+  arma::mat S1t(p, nD, arma::fill::zeros);
+  arma::vec lambda0_d(nD, arma::fill::zeros);
+  arma::mat wt_pre(nsub, nD), wt_post(nsub, nD);
+
+  int block_start = -1;   // first death entry of the current tied block
+
+  for (int i = 0; i < tl_size; i++) {
+    int type = tl_type[i];
+    int idx  = tl_idx[i];
+
+    if (type == 1) {
+      int subj = entry_subject[idx];
+      entry_wt(idx) = subj_wt(subj);
+      active_entry[subj] = idx;
+      double e = entry_wt(idx) * exp_lp(idx);
+      run_s0 += e;
+      const double* zk = Z_pseudo.memptr() + idx;
+      for (arma::uword l = 0; l < p; l++) run_s1(l) += e * zk[l * nrows];
+
+    } else if (type == 0 || type == 3) {
+      double e = entry_wt(idx) * exp_lp(idx);
+      run_s0 -= e;
+      const double* zk = Z_pseudo.memptr() + idx;
+      for (arma::uword l = 0; l < p; l++) run_s1(l) -= e * zk[l * nrows];
+      int subj = entry_subject[idx];
+      if (active_entry[subj] == idx) active_entry[subj] = -1;
+
+    } else if (type == 2) {
+      // QUERY for death entry idx: record weighted sums at t-
+      if (block_start < 0) block_start = idx;
+      S0t(idx) = run_s0;
+      S1t.col(idx) = run_s1;
+      wt_pre.col(idx) = subj_wt;
+
+      // Is this the last death entry at this time? (tied QUERYs are adjacent)
+      bool last_in_block = true;
+      if (i + 1 < tl_size && tl_type[i + 1] == 2 &&
+          td_sorted(tl_idx[i + 1]) == td_sorted(idx))
+        last_in_block = false;
+
+      if (last_in_block) {
+        int k0 = block_start, k1 = idx;   // entries k0..k1 share this time
+        double jump_each = (run_s0 > 0.0) ? 1.0 / run_s0 : 0.0;
+        double jump_total = jump_each * (double)(k1 - k0 + 1);
+        // per-entry jump, same scale as jfm_lambda0d_solution: d_k / (n * S0t/n)
+        for (int k = k0; k <= k1; k++) lambda0_d(k) = jump_each;
+        // Advance cumulative hazards and weights; rebuild running sums.
+        run_s0 = 0.0;
+        run_s1.zeros();
+        for (arma::uword s = 0; s < nsub; s++) {
+          int ae = active_entry[s];
+          if (ae >= 0) cumhaz(s) += jump_total * exp_lp(ae);
+          subj_wt(s) = 1.0 / (1.0 + theta_subj(s) * cumhaz(s));
+          if (ae < 0) continue;
+          entry_wt(ae) = subj_wt(s);
+          double e = entry_wt(ae) * exp_lp(ae);
+          run_s0 += e;
+          const double* zk = Z_pseudo.memptr() + ae;
+          for (arma::uword l = 0; l < p; l++) run_s1(l) += e * zk[l * nrows];
+        }
+        for (int k = k0; k <= k1; k++) wt_post.col(k) = subj_wt;
+        block_start = -1;
+      }
+    }
+  }
+
+  double inv_n = 1.0 / (double)n;
+  arma::vec s0t_out = S0t * inv_n;
+  return Rcpp::List::create(
+    Rcpp::Named("S0t") = Rcpp::NumericVector(s0t_out.begin(), s0t_out.end()),
+    Rcpp::Named("S1t") = S1t * inv_n,
+    Rcpp::Named("lambda0_d") = Rcpp::NumericVector(lambda0_d.begin(), lambda0_d.end()),
+    Rcpp::Named("wt_pre") = wt_pre,
+    Rcpp::Named("wt_post") = wt_post
+  );
+}
+
+
+// Closed-form update of the frailty variance theta.
+//
+// Kalbfleisch et al. (2013), eq. (15)-(16):
+//   U3(theta) = sum_i int_0^tau { N_i^R(t) - (theta + 1) r_2i(t) G(t) } dN_i^D(t),
+//   r_2i(t)   = w_i(t) int_0^t exp(z_i(u)' alpha) dLambda_0^R(u),
+//   G(t)      = sum_j Y_j*(t) N_j^R(t) / r_2j(t)  /  sum_j Y_j*(t),
+//   Y_j*(t)   = Y_j(t) {1 - N_j^D(t)} (at risk at t and still alive after t).
+// Holding the weights at the current theta (their step iv), U3 = 0 is linear:
+//   theta + 1 = sum_deaths N_i^R(t_i) / sum_deaths r_2i(t_i) G(t_i).
+// Returns the two sums; the caller forms theta = max(num / den - 1, 0).
+//
+// The recurrence integral uses the covariate row in effect just before each
+// recurrence (entry time strictly less than the recurrence time), matching
+// the recurrent-event risk sets; N_j^R(t) counts recurrences at times <= t.
+//
+// entry_times, entry_subject: sorted pseudo-entries (0-based subjects)
+// exp_lp_r: n_pseudo vector exp(z_j' alpha)
+// tr_sorted, tr_subj: sorted recurrence times and their 0-based subjects
+// lambda0_r: baseline recurrence jump per sorted recurrence entry
+// td_sorted, td_subj: sorted death times and their 0-based subjects
+// wt_pre: n x n_D weights at t_k- (from jfm_death_forward_cpp)
+// Y, STATUS: per-subject follow-up time and death indicator
+//
+// [[Rcpp::export(rng = false)]]
+Rcpp::List jfm_theta_update_cpp(
+    const arma::vec& entry_times,
+    const Rcpp::IntegerVector& entry_subject,
+    const arma::vec& exp_lp_r,
+    const arma::vec& tr_sorted,
+    const Rcpp::IntegerVector& tr_subj,
+    const arma::vec& lambda0_r,
+    const arma::vec& td_sorted,
+    const Rcpp::IntegerVector& td_subj,
+    const arma::mat& wt_pre,
+    const arma::vec& Y,
+    const arma::ivec& STATUS
+) {
+  arma::uword nsub = Y.n_elem;
+  arma::uword np = entry_times.n_elem, nR = tr_sorted.n_elem, nD = td_sorted.n_elem;
+
+  arma::vec A(nsub, arma::fill::zeros);       // integral accumulated over closed rows
+  arma::vec cur_e(nsub, arma::fill::zeros);   // exp(lp) of the current row
+  arma::vec cur_C0(nsub, arma::fill::zeros);  // cumulative baseline at the row's entry
+  arma::vec NR(nsub, arma::fill::zeros);
+  std::vector<bool> started(nsub, false);
+  double C = 0.0;                             // cumulative recurrence baseline so far
+
+  double num = 0.0, den = 0.0;
+  arma::uword ip = 0, ir = 0, id = 0;
+  arma::vec r2(nsub);
+
+  while (id < nD) {
+    double t = td_sorted(id);
+    // 1. recurrence jumps at times <= t
+    while (ir < nR && tr_sorted(ir) <= t) {
+      // entries that start strictly before this recurrence come first
+      while (ip < np && entry_times(ip) < tr_sorted(ir)) {
+        int s = entry_subject[ip];
+        if (started[s]) A(s) += cur_e(s) * (C - cur_C0(s));
+        cur_e(s) = exp_lp_r(ip); cur_C0(s) = C; started[s] = true;
+        ip++;
+      }
+      C += lambda0_r(ir);
+      NR(tr_subj[ir]) += 1.0;
+      ir++;
+    }
+    // 2. entries starting strictly before t
+    while (ip < np && entry_times(ip) < t) {
+      int s = entry_subject[ip];
+      if (started[s]) A(s) += cur_e(s) * (C - cur_C0(s));
+      cur_e(s) = exp_lp_r(ip); cur_C0(s) = C; started[s] = true;
+      ip++;
+    }
+    // 3. all death entries tied at t share G(t)
+    arma::uword id_end = id;
+    while (id_end < nD && td_sorted(id_end) == t) id_end++;
+    double sum_ratio = 0.0, n_star = 0.0;
+    for (arma::uword s = 0; s < nsub; s++) {
+      double R = started[s] ? A(s) + cur_e(s) * (C - cur_C0(s)) : 0.0;
+      r2(s) = wt_pre(s, id) * R;
+      bool ystar = (Y(s) > t) || (Y(s) == t && STATUS(s) == 0);
+      if (!ystar) continue;
+      n_star += 1.0;
+      if (r2(s) > 0.0) sum_ratio += NR(s) / r2(s);
+    }
+    if (n_star > 0.0) {
+      double G = sum_ratio / n_star;
+      for (arma::uword k = id; k < id_end; k++) {
+        int i = td_subj[k];
+        num += NR(i);
+        den += r2(i) * G;
+      }
+    }
+    // (deaths with nobody else still at risk carry no information on theta)
+    id = id_end;
+  }
+
+  return Rcpp::List::create(Rcpp::Named("num") = num, Rcpp::Named("den") = den);
+}
+
+
+// ==================== Score-only weighted passes ====================
+//
+// The weighted passes above rebuild the p-vector S1 = sum_j w_j e_j z_j over
+// the active entries at every weight change, which costs O(n p) per death time.
+// The score needs S1 only through
+//   sum_k S1_k / S0_k = sum_j e_j z_j c_j,   c_j = sum_{k: j at risk} w_j(t_k) / S0_k,
+// so it is enough to track the scalar S0 and, for each pseudo-entry, the
+// accumulated c_j. Weights are constant between weight changes, so c_j is
+// accumulated segment by segment from the running sum P = sum_k 1 / S0_k.
+// The score is then sum_k z_{epi_k} - Z' (e o c), one O(n_pseudo p) product.
+// These functions return the same score as the S1-based versions followed by
+// jfm_score_fast_cpp (checked in the package tests).
+
+static arma::vec jfm_score_from_c(const arma::mat& Z_pseudo,
+                                  const Rcpp::IntegerVector& epi,
+                                  const arma::vec& exp_lp,
+                                  const arma::vec& c) {
+  arma::vec U = -(Z_pseudo.t() * (exp_lp % c));
+  arma::uword nrows = Z_pseudo.n_rows, p = Z_pseudo.n_cols;
+  for (R_xlen_t i = 0; i < epi.size(); i++) {
+    const double* zk = Z_pseudo.memptr() + epi[i];
+    for (arma::uword l = 0; l < p; l++) U(l) += zk[l * nrows];
+  }
+  return U;
+}
+
+// Weighted recurrence pass (same inputs as jfm_s0s1_wt_lp_cpp plus the event
+// pseudo-entry indices). Returns list(S0t = ne-vec divided by n,
+// score = p-vec, NOT divided by n, as from jfm_score_fast_cpp).
+// [[Rcpp::export(rng = false)]]
+Rcpp::List jfm_wt_score_lp_cpp(
+    const Rcpp::IntegerVector& tl_type,
+    const Rcpp::IntegerVector& tl_idx,
+    int tl_size,
+    const arma::mat& Z_pseudo,
+    const Rcpp::IntegerVector& entry_subject,
+    const arma::vec& exp_lp,
+    const arma::mat& wt_subj,
+    int ne,
+    int n,
+    const Rcpp::IntegerVector& epi
+) {
+  arma::uword npseudo = Z_pseudo.n_rows;
+  arma::uword nsub = (arma::uword)n;
+  arma::vec entry_wt(npseudo, arma::fill::ones);
+  arma::vec seg_start(npseudo, arma::fill::zeros);
+  arma::vec c(npseudo, arma::fill::zeros);
+  arma::vec subj_wt(nsub, arma::fill::ones);
+  std::vector<int> active_entry(nsub, -1);
+  double run_s0 = 0.0, P = 0.0;
+  arma::vec S0t(ne, arma::fill::zeros);
+
+  for (int i = 0; i < tl_size; i++) {
+    int type = tl_type[i];
+    int idx  = tl_idx[i];
+    if (type == 1) {
+      int subj = entry_subject[idx];
+      entry_wt(idx) = subj_wt(subj);
+      active_entry[subj] = idx;
+      seg_start(idx) = P;
+      run_s0 += entry_wt(idx) * exp_lp(idx);
+    } else if (type == 0 || type == 3) {
+      run_s0 -= entry_wt(idx) * exp_lp(idx);
+      c(idx) += entry_wt(idx) * (P - seg_start(idx));
+      seg_start(idx) = P;
+      int subj = entry_subject[idx];
+      if (active_entry[subj] == idx) active_entry[subj] = -1;
+    } else if (type == 4) {
+      run_s0 = 0.0;
+      for (arma::uword s = 0; s < nsub; s++) {
+        subj_wt(s) = wt_subj(s, idx);
+        int ae = active_entry[s];
+        if (ae < 0) continue;
+        c(ae) += entry_wt(ae) * (P - seg_start(ae));
+        seg_start(ae) = P;
+        entry_wt(ae) = subj_wt(s);
+        run_s0 += entry_wt(ae) * exp_lp(ae);
+      }
+    } else {
+      S0t(idx) = run_s0;
+      if (run_s0 > 0.0) P += 1.0 / run_s0;
+    }
+  }
+  for (arma::uword s = 0; s < nsub; s++) {
+    int ae = active_entry[s];
+    if (ae >= 0) c(ae) += entry_wt(ae) * (P - seg_start(ae));
+  }
+
+  arma::vec U = jfm_score_from_c(Z_pseudo, epi, exp_lp, c);
+  arma::vec s0t_out = S0t / (double)n;
+  return Rcpp::List::create(
+    Rcpp::Named("S0t") = Rcpp::NumericVector(s0t_out.begin(), s0t_out.end()),
+    Rcpp::Named("score") = Rcpp::NumericVector(U.begin(), U.end())
+  );
+}
+
+// Death forward pass (same inputs and outputs as jfm_death_forward_cpp, plus
+// epi = death event pseudo-entry indices), returning the score in place of S1t.
+// [[Rcpp::export(rng = false)]]
+Rcpp::List jfm_death_forward_score_cpp(
+    const Rcpp::IntegerVector& tl_type,
+    const Rcpp::IntegerVector& tl_idx,
+    int tl_size,
+    const arma::mat& Z_pseudo,
+    const Rcpp::IntegerVector& entry_subject,
+    const arma::vec& exp_lp,
+    const arma::vec& theta_subj,
+    const arma::vec& td_sorted,
+    int n,
+    const Rcpp::IntegerVector& epi
+) {
+  arma::uword npseudo = Z_pseudo.n_rows;
+  arma::uword nsub = (arma::uword)n;
+  arma::uword nD = td_sorted.n_elem;
+
+  arma::vec cumhaz(nsub, arma::fill::zeros);
+  arma::vec subj_wt(nsub, arma::fill::ones);
+  arma::vec entry_wt(npseudo, arma::fill::ones);
+  arma::vec seg_start(npseudo, arma::fill::zeros);
+  arma::vec c(npseudo, arma::fill::zeros);
+  std::vector<int> active_entry(nsub, -1);
+  double run_s0 = 0.0, P = 0.0;
+
+  arma::vec S0t(nD, arma::fill::zeros);
+  arma::vec lambda0_d(nD, arma::fill::zeros);
+  arma::mat wt_pre(nsub, nD), wt_post(nsub, nD);
+  int block_start = -1;
+
+  for (int i = 0; i < tl_size; i++) {
+    int type = tl_type[i];
+    int idx  = tl_idx[i];
+    if (type == 1) {
+      int subj = entry_subject[idx];
+      entry_wt(idx) = subj_wt(subj);
+      active_entry[subj] = idx;
+      seg_start(idx) = P;
+      run_s0 += entry_wt(idx) * exp_lp(idx);
+    } else if (type == 0 || type == 3) {
+      run_s0 -= entry_wt(idx) * exp_lp(idx);
+      c(idx) += entry_wt(idx) * (P - seg_start(idx));
+      seg_start(idx) = P;
+      int subj = entry_subject[idx];
+      if (active_entry[subj] == idx) active_entry[subj] = -1;
+    } else if (type == 2) {
+      if (block_start < 0) block_start = idx;
+      S0t(idx) = run_s0;
+      wt_pre.col(idx) = subj_wt;
+      if (run_s0 > 0.0) P += 1.0 / run_s0;
+
+      bool last_in_block = true;
+      if (i + 1 < tl_size && tl_type[i + 1] == 2 &&
+          td_sorted(tl_idx[i + 1]) == td_sorted(idx))
+        last_in_block = false;
+
+      if (last_in_block) {
+        int k0 = block_start, k1 = idx;
+        double jump_each = (run_s0 > 0.0) ? 1.0 / run_s0 : 0.0;
+        double jump_total = jump_each * (double)(k1 - k0 + 1);
+        for (int k = k0; k <= k1; k++) lambda0_d(k) = jump_each;
+        run_s0 = 0.0;
+        for (arma::uword s = 0; s < nsub; s++) {
+          int ae = active_entry[s];
+          if (ae >= 0) cumhaz(s) += jump_total * exp_lp(ae);
+          subj_wt(s) = 1.0 / (1.0 + theta_subj(s) * cumhaz(s));
+          if (ae < 0) continue;
+          c(ae) += entry_wt(ae) * (P - seg_start(ae));
+          seg_start(ae) = P;
+          entry_wt(ae) = subj_wt(s);
+          run_s0 += entry_wt(ae) * exp_lp(ae);
+        }
+        for (int k = k0; k <= k1; k++) wt_post.col(k) = subj_wt;
+        block_start = -1;
+      }
+    }
+  }
+  for (arma::uword s = 0; s < nsub; s++) {
+    int ae = active_entry[s];
+    if (ae >= 0) c(ae) += entry_wt(ae) * (P - seg_start(ae));
+  }
+
+  arma::vec U = jfm_score_from_c(Z_pseudo, epi, exp_lp, c);
+  arma::vec s0t_out = S0t / (double)n;
+  return Rcpp::List::create(
+    Rcpp::Named("S0t") = Rcpp::NumericVector(s0t_out.begin(), s0t_out.end()),
+    Rcpp::Named("score") = Rcpp::NumericVector(U.begin(), U.end()),
+    Rcpp::Named("lambda0_d") = Rcpp::NumericVector(lambda0_d.begin(), lambda0_d.end()),
+    Rcpp::Named("wt_pre") = wt_pre,
+    Rcpp::Named("wt_post") = wt_post
   );
 }

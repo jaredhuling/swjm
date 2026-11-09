@@ -82,6 +82,11 @@ generate_data <- function(n, p, scenario = 1, model = c("jfm", "jscm"), ...) {
 #'   \code{"external"} changes covariates at predetermined Poisson times
 #'   independent of the event process (Kalbfleisch-compatible);
 #'   \code{"fixed"} draws one covariate vector per subject that never changes.
+#' @param cov_scale Numeric. Standard deviation of the normal covariate draws
+#'   (default 1). With \code{cov_type = "fixed"} each subject keeps one
+#'   linear predictor for the whole follow-up, so the scenario coefficients
+#'   combined with unit-variance covariates give some subjects extremely high
+#'   recurrence rates; a smaller scale keeps the event counts realistic.
 #'
 #' @return A list with components:
 #'   \describe{
@@ -102,8 +107,11 @@ generate_data <- function(n, p, scenario = 1, model = c("jfm", "jscm"), ...) {
 generate_data_jfm <- function(n, p, scenario = 1, b = 6.50,
                                lambda0_d = 0.041, lambda0_r = 1,
                                gamma_frailty = 0,
-                               cov_type = c("internal", "external", "fixed")) {
+                               cov_type = c("internal", "external", "fixed"),
+                               cov_scale = 1) {
   cov_type <- match.arg(cov_type)
+  if (!is.numeric(cov_scale) || length(cov_scale) != 1L || !(cov_scale > 0))
+    stop("'cov_scale' must be a single positive number.", call. = FALSE)
   S <- scenario
   theta <- 1
   alpha.star <- numeric(p)
@@ -162,7 +170,7 @@ generate_data_jfm <- function(n, p, scenario = 1, b = 6.50,
     # Generate covariate schedule based on cov_type
     if (cov_type == "fixed") {
       # Single covariate drawn once per subject
-      z_fixed <- rnorm(p)
+      z_fixed <- rnorm(p, sd = cov_scale)
       cov_break_times <- c(0, censor)
       cov_values <- list(z_fixed)
     } else if (cov_type == "external") {
@@ -170,7 +178,7 @@ generate_data_jfm <- function(n, p, scenario = 1, b = 6.50,
       n_changes <- rpois(1, lambda = 3)
       ch_times <- if (n_changes > 0) sort(runif(n_changes, 0, censor)) else numeric(0)
       cov_break_times <- c(0, ch_times, censor)
-      cov_values <- lapply(seq_len(length(cov_break_times) - 1), function(i) rnorm(p))
+      cov_values <- lapply(seq_len(length(cov_break_times) - 1), function(i) rnorm(p, sd = cov_scale))
     } else {
       # "internal": covariates redrawn at each recurrent event (legacy behavior)
       cov_break_times <- NULL  # not used; z drawn inside the event loop
@@ -189,7 +197,7 @@ generate_data_jfm <- function(n, p, scenario = 1, b = 6.50,
     if (cov_type == "internal") {
       # Legacy: redraw covariates at each event
       while (Xk < censor && delta == 0L) {
-        z <- rnorm(p)
+        z <- rnorm(p, sd = cov_scale)
         T_gap <- rexp(1, rate = Z_i * lambda0_r * exp(drop(beta %*% z)))
         D_gap <- rexp(1, rate = Z_i * lambda0_d * exp(drop(alpha %*% z)))
 
@@ -253,7 +261,7 @@ generate_data_jfm <- function(n, p, scenario = 1, b = 6.50,
       X_buf[1]     <- censor
       ev_buf[1]    <- 0L
       st_buf[1]    <- 0L
-      cov_buf[1, ] <- if (cov_type == "internal") rnorm(p) else cov_values[[1]]
+      cov_buf[1, ] <- if (cov_type == "internal") rnorm(p, sd = cov_scale) else cov_values[[1]]
     }
 
     X_buf  <- X_buf[1:k]
@@ -262,8 +270,22 @@ generate_data_jfm <- function(n, p, scenario = 1, b = 6.50,
     cov_buf <- cov_buf[1:k, , drop = FALSE]
 
     if (delta != 1L) {
-      X_buf[k]  <- censor
-      ev_buf[k] <- 0L
+      if (cov_type == "internal") {
+        # The last recorded gap overshot the censoring time, so that row is
+        # not an event; it becomes the censoring row.
+        X_buf[k]  <- censor
+        ev_buf[k] <- 0L
+      } else if (ev_buf[k] == 1L) {
+        # "fixed"/"external" record only events before the censoring time, so
+        # the last row is a genuine recurrence: append a censoring row rather
+        # than overwrite it (overwriting dropped each censored subject's last
+        # recurrence).
+        k <- k + 1L
+        X_buf   <- c(X_buf, censor)
+        ev_buf  <- c(ev_buf, 0L)
+        st_buf  <- c(st_buf, 0L)
+        cov_buf <- rbind(cov_buf, cov_values[[length(cov_values)]])
+      }
     }
 
     sub_t_start <- c(0, X_buf[-k])

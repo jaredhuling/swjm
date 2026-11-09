@@ -39,10 +39,18 @@ Smaller values trace the path more finely at proportionally greater cost;
 \item{pp}{Integer. Early-stopping block size: algorithm checks every
 \code{pp} iterations if fewer than 3 unique coordinates were updated.}
 
-\item{estimate_frailty}{Logical. For JFM only: if \code{TRUE}, estimates
-the frailty variance and uses the Kalbfleisch et al. (2013) frailty
-weights \eqn{w_i(t)} in the estimating equations. If \code{FALSE}
-(default), uses unit weights (simplified model without frailty).}
+\item{estimate_frailty}{Logical. For JFM only: if \code{TRUE}, fits the
+full joint frailty model with a gamma frailty of unknown variance, using
+the frailty weights \eqn{w_i(t)} of Kalbfleisch et al. (2013) in the
+estimating equations. The variance is estimated from their estimating
+equation (15): it is first iterated to convergence at the initial
+coefficients and then updated once per stagewise iteration. The weights
+at time \eqn{t} use the cumulative death hazard just before \eqn{t}.
+Kalbfleisch et al. assume external covariates; covariates whose path
+depends on the recurrent-event history (for example, covariates redrawn
+at each recurrence) make the variance estimate inconsistent. If
+\code{FALSE} (default), uses unit weights (simplified model without
+frailty).}
 
 \item{standardize}{Logical. If \code{TRUE} (default), covariates are
 divided by their standard deviations before fitting and coefficients
@@ -77,6 +85,9 @@ at each iteration.}
 \item{norm}{Numeric vector of penalty norm values along the path.}
 \item{model}{Character, the model used.}
 \item{penalty}{Character, the penalty used.}
+\item{frailty_var}{Numeric vector of the estimated frailty variance
+at each iteration (full joint frailty model); 0 for the simplified
+model and \code{NULL} for the JSCM.}
 }
 }
 \description{

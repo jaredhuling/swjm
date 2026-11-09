@@ -44,9 +44,11 @@ from a truncated one; a warning is issued if coverage still fails.}
 
 \item{pp}{Integer. Early-stop block size (passed to \code{stagewise_fit}).}
 
-\item{estimate_frailty}{Logical. For JFM only: if \code{TRUE}, estimates
-the frailty variance and uses frailty weights in the estimating equations
-(passed to \code{stagewise_fit}).}
+\item{estimate_frailty}{Logical. For JFM only: if \code{TRUE}, fits the
+full joint frailty model (passed to \code{stagewise_fit}), and the
+cross-validation criterion evaluates the frailty-weighted estimating
+equations, each subject using the coefficients and estimated frailty
+variance of the fold in which it was held out.}
 
 \item{ncores}{Integer. Number of cores for parallel fold training
 (default 1, sequential). Uses \code{parallel::parLapply} with a

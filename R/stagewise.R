@@ -26,10 +26,18 @@
 #' @param max_iter Integer. Maximum number of stagewise iterations.
 #' @param pp Integer. Early-stopping block size: algorithm checks every
 #'   \code{pp} iterations if fewer than 3 unique coordinates were updated.
-#' @param estimate_frailty Logical. For JFM only: if \code{TRUE}, estimates
-#'   the frailty variance and uses the Kalbfleisch et al. (2013) frailty
-#'   weights \eqn{w_i(t)} in the estimating equations. If \code{FALSE}
-#'   (default), uses unit weights (simplified model without frailty).
+#' @param estimate_frailty Logical. For JFM only: if \code{TRUE}, fits the
+#'   full joint frailty model with a gamma frailty of unknown variance, using
+#'   the frailty weights \eqn{w_i(t)} of Kalbfleisch et al. (2013) in the
+#'   estimating equations. The variance is estimated from their estimating
+#'   equation (15): it is first iterated to convergence at the initial
+#'   coefficients and then updated once per stagewise iteration. The weights
+#'   at time \eqn{t} use the cumulative death hazard just before \eqn{t}.
+#'   Kalbfleisch et al. assume external covariates; covariates whose path
+#'   depends on the recurrent-event history (for example, covariates redrawn
+#'   at each recurrence) make the variance estimate inconsistent. If
+#'   \code{FALSE} (default), uses unit weights (simplified model without
+#'   frailty).
 #' @param lambda_min_ratio Numeric. The path stops once the dual norm falls
 #'   below this fraction of its value at the top of the path. Past that point
 #'   the coefficients are essentially static, so the remaining iterations cost
@@ -61,6 +69,9 @@
 #'     \item{norm}{Numeric vector of penalty norm values along the path.}
 #'     \item{model}{Character, the model used.}
 #'     \item{penalty}{Character, the penalty used.}
+#'     \item{frailty_var}{Numeric vector of the estimated frailty variance
+#'       at each iteration (full joint frailty model); 0 for the simplified
+#'       model and \code{NULL} for the JSCM.}
 #'   }
 #'
 #' @examples
@@ -167,7 +178,8 @@ stagewise_fit <- function(data, model = c("jfm", "jscm"),
       penalty = penalty,
       p = p,
       cov_sd = cov_sd,
-      standardize = standardize
+      standardize = standardize,
+      frailty_var = result$frailty_var
     ),
     class = "swjm_path"
   )
@@ -288,11 +300,12 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
   beta <- initial_beta
 
   # Initialize baseline hazards and build pseudo-data via fast C++
+  # (the weight matrix built here is not used; jfm_build_pseudo_cpp is called
+  # for the sorted pseudo-data and event indices only)
   lambda0_d <- rep(0.2, length(td))
-  theta <- 1
   Z1_raw <- do.call(rbind, Z)
   psd <- jfm_build_pseudo_cpp(t.start, I, Z1_raw, Y, td, td.id, tr, tr.id,
-                                beta, lambda0_d, theta)
+                                beta, lambda0_d, 1)
 
   Z_pseudo  <- psd$Z_pseudo
   td_sorted <- psd$td_sorted
@@ -312,35 +325,49 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
   n_re <- length(tr)
 
   if (estimate_frailty) {
-    # Weighted timelines (include WEIGHT_UPDATE events at death times)
-    tl_death <- jfm_precompute_timeline_wt(entry_times, exit_times, is_last,
-                                            td_sorted, td_sorted, 0L)
+    # Full model: the death risk sets are built in one forward pass with
+    # predictable frailty weights (jfm_death_forward_score_cpp), so the death timeline
+    # needs no weight-update events; the recurrence timeline applies the weight
+    # in effect just after each death time.
+    tl_death <- jfm_precompute_timeline(entry_times, exit_times, is_last,
+                                         td_sorted, 0L)
     tl_recur <- jfm_precompute_timeline_wt(entry_times, exit_times, is_last,
                                             tr_sorted, td_sorted, 1L)
+    td_subj <- td_id - 1L
+    tr_subj <- tr_id - 1L
+    frailty_var <- 1
   } else {
     tl_death <- jfm_precompute_timeline(entry_times, exit_times, is_last,
                                          td_sorted, 0L)
     tl_recur <- jfm_precompute_timeline(entry_times, exit_times, is_last,
                                          tr_sorted, 1L)
+    frailty_var <- 0
   }
 
-  # Helper: compute S0t/S1t + baseline hazards with current alpha, beta
+  # Helper: compute S0t/S1t + scores with current alpha, beta. For the full
+  # model it also solves the death baseline exactly given the frailty weights
+  # and then takes one step of the frailty-variance update (Kalbfleisch et al.,
+  # 2013, step iv: weights held at the current value, U3 = 0 solved for theta),
+  # so the variance is re-estimated along the path as the coefficients move.
   .compute_ee <- function(alpha, beta) {
     if (estimate_frailty) {
-      # Update weights using current lambda0_d (warm start from previous step).
-      # Two iterations suffice since coefficients change by only eps per step.
-      for (wt_it in 1:2) {
-        pp_wt <- jfm_build_pseudo_cpp(t.start, I, Z1_raw, Y,
-          td, td.id, tr, tr.id, beta, lambda0_d, theta)
-        wt_de <- pp_wt$wt_de
-        r_de <- jfm_s0s1_wt_fast_cpp(tl_death$type, tl_death$idx, tl_death$size,
-                                        Z_pseudo, entry_subject, beta, wt_de, n_de, n)
-        lambda0_d <<- jfm_lambda0d_solution(td, d_td, n, r_de$S0t)
-      }
-      r_de$score <- jfm_score_fast_cpp(de_epi, Z_pseudo, r_de$S1t, r_de$S0t) / n
-      r_re <- jfm_s0s1_wt_fast_cpp(tl_recur$type, tl_recur$idx, tl_recur$size,
-                                      Z_pseudo, entry_subject, alpha, wt_de, n_re, n)
-      r_re$score <- jfm_score_fast_cpp(re_epi, Z_pseudo, r_re$S1t, r_re$S0t) / n
+      exp_lp_d <- exp(drop(Z_pseudo %*% beta))
+      exp_lp_r <- exp(drop(Z_pseudo %*% alpha))
+      fw <- jfm_death_forward_score_cpp(tl_death$type, tl_death$idx, tl_death$size,
+                                        Z_pseudo, entry_subject, exp_lp_d,
+                                        rep(frailty_var, n), td_sorted, n, de_epi)
+      lambda0_d <<- fw$lambda0_d
+      r_de <- list(S0t = fw$S0t, score = fw$score / n)
+      r_re <- jfm_wt_score_lp_cpp(tl_recur$type, tl_recur$idx, tl_recur$size,
+                                  Z_pseudo, entry_subject, exp_lp_r,
+                                  fw$wt_post, n_re, n, re_epi)
+      r_re$score <- r_re$score / n
+      lam_r <- 1 / (n * r_re$S0t)
+      tu <- jfm_theta_update_cpp(entry_times, entry_subject, exp_lp_r,
+                                 tr_sorted, tr_subj, lam_r,
+                                 td_sorted, td_subj, fw$wt_pre, Y,
+                                 as.integer(STATUS))
+      frailty_var <<- if (tu$den > 0) max(tu$num / tu$den - 1, 0) else frailty_var
     } else {
       r_de <- jfm_s0s1_score_fused_cpp(tl_death$type, tl_death$idx, tl_death$size,
                                           Z_pseudo, beta, de_epi, n_de, n)
@@ -350,10 +377,23 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
     list(res_de = r_de, res_re = r_re)
   }
 
+  # For the full model, iterate the frailty variance to convergence at the
+  # initial coefficients before the path starts, so the warm-started updates
+  # along the path begin from the estimate rather than from 1.
+  frailty_init_iter <- 0L
+  if (estimate_frailty) {
+    for (it0 in seq_len(200L)) {
+      fv_old <- frailty_var
+      .compute_ee(alpha, beta)
+      frailty_init_iter <- it0
+      if (abs(frailty_var - fv_old) < 1e-6 * max(1, fv_old)) break
+    }
+  }
+
   # Initial computation
   ee <- .compute_ee(alpha, beta)
   S0t_de <- ee$res_de$S0t
-  lambda0_d <- jfm_lambda0d_solution(td, d_td, n, S0t_de)
+  if (!estimate_frailty) lambda0_d <- jfm_lambda0d_solution(td, d_td, n, S0t_de)
   S0t_re <- ee$res_re$S0t
   lambda0_r <- jfm_lambda0r_solution(tr, d_tr, n, S0t_re)
 
@@ -380,6 +420,9 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
   theta_update[, 1] <- thetaK
   normK_update <- rep(NA_real_, iter + 1L)
   normK_update[1] <- normK
+  # Frailty variance along the path (0 = simplified model, no frailty)
+  frailty_var_update <- rep(NA_real_, iter + 1L)
+  frailty_var_update[1] <- frailty_var
   norm2_g1_update <- rep(NA_real_, iter + 1L)
   norm2_g1_update[1] <- sqrt(sum(g1^2))
   norm2_g2_update <- rep(NA_real_, iter + 1L)
@@ -421,8 +464,9 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
 
     # Update baseline hazards + recompute gradients
     ee <- .compute_ee(alpha, beta)
+    frailty_var_update[k + 1] <- frailty_var
     S0t_de    <- ee$res_de$S0t
-    lambda0_d <- jfm_lambda0d_solution(td, d_td, n, S0t_de)
+    if (!estimate_frailty) lambda0_d <- jfm_lambda0d_solution(td, d_td, n, S0t_de)
     S0t_re    <- ee$res_re$S0t
     lambda0_r <- jfm_lambda0r_solution(tr, d_tr, n, S0t_re)
 
@@ -485,7 +529,9 @@ stagewise_jfm <- function(initial_alpha, initial_beta, Data2, penalty,
     lambda = lambda_vec[idx_keep],
     norm2_g2_update = norm2_g2_update[idx_keep],
     g1_update = g1_update[, idx_keep, drop = FALSE],
-    g2_update = g2_update[, idx_keep, drop = FALSE]
+    g2_update = g2_update[, idx_keep, drop = FALSE],
+    frailty_var = frailty_var_update[idx_keep],
+    frailty_init_iter = frailty_init_iter
   )
 }
 

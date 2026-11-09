@@ -53,6 +53,10 @@ jfm_s0s1_wt_fast_cpp <- function(tl_type, tl_idx, tl_size, Z_pseudo, entry_subje
     .Call(`_swjm_jfm_s0s1_wt_fast_cpp`, tl_type, tl_idx, tl_size, Z_pseudo, entry_subject, coef, wt_subj, ne, n)
 }
 
+jfm_s0s1_wt_lp_cpp <- function(tl_type, tl_idx, tl_size, Z_pseudo, entry_subject, exp_lp, wt_subj, ne, n) {
+    .Call(`_swjm_jfm_s0s1_wt_lp_cpp`, tl_type, tl_idx, tl_size, Z_pseudo, entry_subject, exp_lp, wt_subj, ne, n)
+}
+
 jfm_s0s1_score_fused_cpp <- function(tl_type, tl_idx, tl_size, Z_pseudo, coef, event_pseudo_idx, ne, n) {
     .Call(`_swjm_jfm_s0s1_score_fused_cpp`, tl_type, tl_idx, tl_size, Z_pseudo, coef, event_pseudo_idx, ne, n)
 }
@@ -71,5 +75,21 @@ jfm_score_fast_cpp <- function(event_pseudo_idx, Z_pseudo, S1t, S0t) {
 
 jfm_build_pseudo_cpp <- function(t_start, subj_id_raw, Z_raw, Y, td, td_id_raw, tr, tr_id_raw, coef_death, lambda0_d, theta) {
     .Call(`_swjm_jfm_build_pseudo_cpp`, t_start, subj_id_raw, Z_raw, Y, td, td_id_raw, tr, tr_id_raw, coef_death, lambda0_d, theta)
+}
+
+jfm_death_forward_cpp <- function(tl_type, tl_idx, tl_size, Z_pseudo, entry_subject, exp_lp, theta_subj, td_sorted, n) {
+    .Call(`_swjm_jfm_death_forward_cpp`, tl_type, tl_idx, tl_size, Z_pseudo, entry_subject, exp_lp, theta_subj, td_sorted, n)
+}
+
+jfm_theta_update_cpp <- function(entry_times, entry_subject, exp_lp_r, tr_sorted, tr_subj, lambda0_r, td_sorted, td_subj, wt_pre, Y, STATUS) {
+    .Call(`_swjm_jfm_theta_update_cpp`, entry_times, entry_subject, exp_lp_r, tr_sorted, tr_subj, lambda0_r, td_sorted, td_subj, wt_pre, Y, STATUS)
+}
+
+jfm_wt_score_lp_cpp <- function(tl_type, tl_idx, tl_size, Z_pseudo, entry_subject, exp_lp, wt_subj, ne, n, epi) {
+    .Call(`_swjm_jfm_wt_score_lp_cpp`, tl_type, tl_idx, tl_size, Z_pseudo, entry_subject, exp_lp, wt_subj, ne, n, epi)
+}
+
+jfm_death_forward_score_cpp <- function(tl_type, tl_idx, tl_size, Z_pseudo, entry_subject, exp_lp, theta_subj, td_sorted, n, epi) {
+    .Call(`_swjm_jfm_death_forward_score_cpp`, tl_type, tl_idx, tl_size, Z_pseudo, entry_subject, exp_lp, theta_subj, td_sorted, n, epi)
 }
 

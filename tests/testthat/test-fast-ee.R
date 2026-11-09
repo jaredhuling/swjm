@@ -107,3 +107,48 @@ test_that("stagewise_fit produces consistent results with fast EE", {
   expect_true(all(is.finite(fit$lambda)))
   expect_true(all(is.finite(fit$theta)))
 })
+
+
+test_that("score-only frailty-weighted passes match the S1-based versions", {
+  set.seed(20261108)
+  dat <- generate_data(n = 80, p = 6, scenario = 1, model = "jfm",
+                       gamma_frailty = 1, cov_type = "fixed", cov_scale = 0.2)
+  dc <- swjm:::extract_data_components(dat$data)
+  n <- dc$n; p <- 6L
+  psd <- swjm:::jfm_build_pseudo_cpp(dc$t.start, dc$I, do.call(rbind, dc$Z),
+                                     dc$Y, dc$td, dc$td.id, dc$tr, dc$tr.id,
+                                     numeric(p), rep(0.2, length(dc$td)), 1)
+  Zp <- psd$Z_pseudo
+  tl_d <- swjm:::jfm_precompute_timeline(psd$entry_times, psd$exit_times,
+                                         psd$is_last, psd$td_sorted, 0L)
+  tl_r <- swjm:::jfm_precompute_timeline_wt(psd$entry_times, psd$exit_times,
+                                            psd$is_last, psd$tr_sorted,
+                                            psd$td_sorted, 1L)
+  for (trial in 1:3) {
+    el_d <- exp(drop(Zp %*% rnorm(p, sd = 0.3)))
+    el_r <- exp(drop(Zp %*% rnorm(p, sd = 0.3)))
+    th <- runif(n, 0.2, 2)
+    fw_old <- swjm:::jfm_death_forward_cpp(tl_d$type, tl_d$idx, tl_d$size, Zp,
+                                           psd$entry_subject, el_d, th,
+                                           psd$td_sorted, n)
+    fw_new <- swjm:::jfm_death_forward_score_cpp(tl_d$type, tl_d$idx, tl_d$size,
+                                                 Zp, psd$entry_subject, el_d, th,
+                                                 psd$td_sorted, n, psd$de_epi)
+    expect_equal(fw_new$score,
+                 drop(swjm:::jfm_score_fast_cpp(psd$de_epi, Zp, fw_old$S1t,
+                                                fw_old$S0t)), tolerance = 1e-10)
+    for (nm in c("S0t", "lambda0_d", "wt_pre", "wt_post"))
+      expect_equal(fw_new[[nm]], fw_old[[nm]], tolerance = 1e-12)
+
+    rr_old <- swjm:::jfm_s0s1_wt_lp_cpp(tl_r$type, tl_r$idx, tl_r$size, Zp,
+                                        psd$entry_subject, el_r, fw_old$wt_post,
+                                        length(dc$tr), n)
+    rr_new <- swjm:::jfm_wt_score_lp_cpp(tl_r$type, tl_r$idx, tl_r$size, Zp,
+                                         psd$entry_subject, el_r, fw_old$wt_post,
+                                         length(dc$tr), n, psd$re_epi)
+    expect_equal(rr_new$S0t, rr_old$S0t, tolerance = 1e-12)
+    expect_equal(rr_new$score,
+                 drop(swjm:::jfm_score_fast_cpp(psd$re_epi, Zp, rr_old$S1t,
+                                                rr_old$S0t)), tolerance = 1e-10)
+  }
+})

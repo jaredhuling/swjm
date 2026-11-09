@@ -211,6 +211,24 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// jfm_s0s1_wt_lp_cpp
+Rcpp::List jfm_s0s1_wt_lp_cpp(const Rcpp::IntegerVector& tl_type, const Rcpp::IntegerVector& tl_idx, int tl_size, const arma::mat& Z_pseudo, const Rcpp::IntegerVector& entry_subject, const arma::vec& exp_lp, const arma::mat& wt_subj, int ne, int n);
+RcppExport SEXP _swjm_jfm_s0s1_wt_lp_cpp(SEXP tl_typeSEXP, SEXP tl_idxSEXP, SEXP tl_sizeSEXP, SEXP Z_pseudoSEXP, SEXP entry_subjectSEXP, SEXP exp_lpSEXP, SEXP wt_subjSEXP, SEXP neSEXP, SEXP nSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type tl_type(tl_typeSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type tl_idx(tl_idxSEXP);
+    Rcpp::traits::input_parameter< int >::type tl_size(tl_sizeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Z_pseudo(Z_pseudoSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type entry_subject(entry_subjectSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type exp_lp(exp_lpSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type wt_subj(wt_subjSEXP);
+    Rcpp::traits::input_parameter< int >::type ne(neSEXP);
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    rcpp_result_gen = Rcpp::wrap(jfm_s0s1_wt_lp_cpp(tl_type, tl_idx, tl_size, Z_pseudo, entry_subject, exp_lp, wt_subj, ne, n));
+    return rcpp_result_gen;
+END_RCPP
+}
 // jfm_s0s1_score_fused_cpp
 Rcpp::List jfm_s0s1_score_fused_cpp(const Rcpp::IntegerVector& tl_type, const Rcpp::IntegerVector& tl_idx, int tl_size, const arma::mat& Z_pseudo, const arma::vec& coef, const Rcpp::IntegerVector& event_pseudo_idx, int ne, int n);
 RcppExport SEXP _swjm_jfm_s0s1_score_fused_cpp(SEXP tl_typeSEXP, SEXP tl_idxSEXP, SEXP tl_sizeSEXP, SEXP Z_pseudoSEXP, SEXP coefSEXP, SEXP event_pseudo_idxSEXP, SEXP neSEXP, SEXP nSEXP) {
@@ -300,6 +318,82 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// jfm_death_forward_cpp
+Rcpp::List jfm_death_forward_cpp(const Rcpp::IntegerVector& tl_type, const Rcpp::IntegerVector& tl_idx, int tl_size, const arma::mat& Z_pseudo, const Rcpp::IntegerVector& entry_subject, const arma::vec& exp_lp, const arma::vec& theta_subj, const arma::vec& td_sorted, int n);
+RcppExport SEXP _swjm_jfm_death_forward_cpp(SEXP tl_typeSEXP, SEXP tl_idxSEXP, SEXP tl_sizeSEXP, SEXP Z_pseudoSEXP, SEXP entry_subjectSEXP, SEXP exp_lpSEXP, SEXP theta_subjSEXP, SEXP td_sortedSEXP, SEXP nSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type tl_type(tl_typeSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type tl_idx(tl_idxSEXP);
+    Rcpp::traits::input_parameter< int >::type tl_size(tl_sizeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Z_pseudo(Z_pseudoSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type entry_subject(entry_subjectSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type exp_lp(exp_lpSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type theta_subj(theta_subjSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type td_sorted(td_sortedSEXP);
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    rcpp_result_gen = Rcpp::wrap(jfm_death_forward_cpp(tl_type, tl_idx, tl_size, Z_pseudo, entry_subject, exp_lp, theta_subj, td_sorted, n));
+    return rcpp_result_gen;
+END_RCPP
+}
+// jfm_theta_update_cpp
+Rcpp::List jfm_theta_update_cpp(const arma::vec& entry_times, const Rcpp::IntegerVector& entry_subject, const arma::vec& exp_lp_r, const arma::vec& tr_sorted, const Rcpp::IntegerVector& tr_subj, const arma::vec& lambda0_r, const arma::vec& td_sorted, const Rcpp::IntegerVector& td_subj, const arma::mat& wt_pre, const arma::vec& Y, const arma::ivec& STATUS);
+RcppExport SEXP _swjm_jfm_theta_update_cpp(SEXP entry_timesSEXP, SEXP entry_subjectSEXP, SEXP exp_lp_rSEXP, SEXP tr_sortedSEXP, SEXP tr_subjSEXP, SEXP lambda0_rSEXP, SEXP td_sortedSEXP, SEXP td_subjSEXP, SEXP wt_preSEXP, SEXP YSEXP, SEXP STATUSSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type entry_times(entry_timesSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type entry_subject(entry_subjectSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type exp_lp_r(exp_lp_rSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type tr_sorted(tr_sortedSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type tr_subj(tr_subjSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type lambda0_r(lambda0_rSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type td_sorted(td_sortedSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type td_subj(td_subjSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type wt_pre(wt_preSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type Y(YSEXP);
+    Rcpp::traits::input_parameter< const arma::ivec& >::type STATUS(STATUSSEXP);
+    rcpp_result_gen = Rcpp::wrap(jfm_theta_update_cpp(entry_times, entry_subject, exp_lp_r, tr_sorted, tr_subj, lambda0_r, td_sorted, td_subj, wt_pre, Y, STATUS));
+    return rcpp_result_gen;
+END_RCPP
+}
+// jfm_wt_score_lp_cpp
+Rcpp::List jfm_wt_score_lp_cpp(const Rcpp::IntegerVector& tl_type, const Rcpp::IntegerVector& tl_idx, int tl_size, const arma::mat& Z_pseudo, const Rcpp::IntegerVector& entry_subject, const arma::vec& exp_lp, const arma::mat& wt_subj, int ne, int n, const Rcpp::IntegerVector& epi);
+RcppExport SEXP _swjm_jfm_wt_score_lp_cpp(SEXP tl_typeSEXP, SEXP tl_idxSEXP, SEXP tl_sizeSEXP, SEXP Z_pseudoSEXP, SEXP entry_subjectSEXP, SEXP exp_lpSEXP, SEXP wt_subjSEXP, SEXP neSEXP, SEXP nSEXP, SEXP epiSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type tl_type(tl_typeSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type tl_idx(tl_idxSEXP);
+    Rcpp::traits::input_parameter< int >::type tl_size(tl_sizeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Z_pseudo(Z_pseudoSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type entry_subject(entry_subjectSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type exp_lp(exp_lpSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type wt_subj(wt_subjSEXP);
+    Rcpp::traits::input_parameter< int >::type ne(neSEXP);
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type epi(epiSEXP);
+    rcpp_result_gen = Rcpp::wrap(jfm_wt_score_lp_cpp(tl_type, tl_idx, tl_size, Z_pseudo, entry_subject, exp_lp, wt_subj, ne, n, epi));
+    return rcpp_result_gen;
+END_RCPP
+}
+// jfm_death_forward_score_cpp
+Rcpp::List jfm_death_forward_score_cpp(const Rcpp::IntegerVector& tl_type, const Rcpp::IntegerVector& tl_idx, int tl_size, const arma::mat& Z_pseudo, const Rcpp::IntegerVector& entry_subject, const arma::vec& exp_lp, const arma::vec& theta_subj, const arma::vec& td_sorted, int n, const Rcpp::IntegerVector& epi);
+RcppExport SEXP _swjm_jfm_death_forward_score_cpp(SEXP tl_typeSEXP, SEXP tl_idxSEXP, SEXP tl_sizeSEXP, SEXP Z_pseudoSEXP, SEXP entry_subjectSEXP, SEXP exp_lpSEXP, SEXP theta_subjSEXP, SEXP td_sortedSEXP, SEXP nSEXP, SEXP epiSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type tl_type(tl_typeSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type tl_idx(tl_idxSEXP);
+    Rcpp::traits::input_parameter< int >::type tl_size(tl_sizeSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Z_pseudo(Z_pseudoSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type entry_subject(entry_subjectSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type exp_lp(exp_lpSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type theta_subj(theta_subjSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type td_sorted(td_sortedSEXP);
+    Rcpp::traits::input_parameter< int >::type n(nSEXP);
+    Rcpp::traits::input_parameter< const Rcpp::IntegerVector& >::type epi(epiSEXP);
+    rcpp_result_gen = Rcpp::wrap(jfm_death_forward_score_cpp(tl_type, tl_idx, tl_size, Z_pseudo, entry_subject, exp_lp, theta_subj, td_sorted, n, epi));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_swjm_am1", (DL_FUNC) &_swjm_am1, 6},
@@ -315,11 +409,16 @@ static const R_CallMethodDef CallEntries[] = {
     {"_swjm_jfm_s0s1_fast_cpp", (DL_FUNC) &_swjm_jfm_s0s1_fast_cpp, 7},
     {"_swjm_jfm_s0s1_fast_cf_cpp", (DL_FUNC) &_swjm_jfm_s0s1_fast_cf_cpp, 9},
     {"_swjm_jfm_s0s1_wt_fast_cpp", (DL_FUNC) &_swjm_jfm_s0s1_wt_fast_cpp, 9},
+    {"_swjm_jfm_s0s1_wt_lp_cpp", (DL_FUNC) &_swjm_jfm_s0s1_wt_lp_cpp, 9},
     {"_swjm_jfm_s0s1_score_fused_cpp", (DL_FUNC) &_swjm_jfm_s0s1_score_fused_cpp, 8},
     {"_swjm_jfm_cv_scores_batch_cpp", (DL_FUNC) &_swjm_jfm_cv_scores_batch_cpp, 10},
     {"_swjm_jfm_cv_scores_batch_cf_cpp", (DL_FUNC) &_swjm_jfm_cv_scores_batch_cf_cpp, 11},
     {"_swjm_jfm_score_fast_cpp", (DL_FUNC) &_swjm_jfm_score_fast_cpp, 4},
     {"_swjm_jfm_build_pseudo_cpp", (DL_FUNC) &_swjm_jfm_build_pseudo_cpp, 11},
+    {"_swjm_jfm_death_forward_cpp", (DL_FUNC) &_swjm_jfm_death_forward_cpp, 9},
+    {"_swjm_jfm_theta_update_cpp", (DL_FUNC) &_swjm_jfm_theta_update_cpp, 11},
+    {"_swjm_jfm_wt_score_lp_cpp", (DL_FUNC) &_swjm_jfm_wt_score_lp_cpp, 10},
+    {"_swjm_jfm_death_forward_score_cpp", (DL_FUNC) &_swjm_jfm_death_forward_score_cpp, 10},
     {NULL, NULL, 0}
 };
 

@@ -24,9 +24,11 @@
 #'   come from interpolation on a completed path rather than extrapolation
 #'   from a truncated one; a warning is issued if coverage still fails.
 #' @param pp Integer. Early-stop block size (passed to \code{stagewise_fit}).
-#' @param estimate_frailty Logical. For JFM only: if \code{TRUE}, estimates
-#'   the frailty variance and uses frailty weights in the estimating equations
-#'   (passed to \code{stagewise_fit}).
+#' @param estimate_frailty Logical. For JFM only: if \code{TRUE}, fits the
+#'   full joint frailty model (passed to \code{stagewise_fit}), and the
+#'   cross-validation criterion evaluates the frailty-weighted estimating
+#'   equations, each subject using the coefficients and estimated frailty
+#'   variance of the fold in which it was held out.
 #' @param ncores Integer. Number of cores for parallel fold training
 #'   (default 1, sequential). Uses \code{parallel::parLapply} with a
 #'   PSOCK cluster, which works on all platforms including Windows.
@@ -158,6 +160,14 @@ cv_stagewise <- function(data, model = c("jfm", "jscm"),
   alpha_best <- theta_best[1:p]
   beta_best  <- theta_best[(p + 1):(2 * p)]
 
+  # Estimated frailty variance at the selected lambda (full JFM only)
+  frailty_var_best <- NULL
+  if (model == "jfm" && estimate_frailty) {
+    fv_dec <- full_fit$frailty_var[dec_idx]
+    frailty_var_best <- fv_dec[lam_best$left] * lam_best$frac +
+      fv_dec[lam_best$right] * (1 - lam_best$frac)
+  }
+
   # Variable counts along the full lambda_seq
   lam_all   <- lambda_interp(lambda_dec, lambda_seq)
   theta_all <- as.matrix(
@@ -192,6 +202,7 @@ cv_stagewise <- function(data, model = c("jfm", "jscm"),
         p              = p,
         alpha          = alpha_best,
         beta           = beta_best,
+        frailty_var    = frailty_var_best,
         n_active_alpha = n_active_alpha,
         n_active_beta  = n_active_beta,
         n_active       = n_active,
@@ -415,6 +426,13 @@ cv_jfm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
         Matrix::Diagonal(x = 1 - lamlist$frac)
     )
     attr(out, "fold_grid_uncovered") <- fp$uncovered_at_cap
+    if (estimate_frailty) {
+      # frailty variance on the common lambda grid, interpolated like the
+      # coefficients
+      fv <- results_tr$frailty_var[dec_idx]
+      attr(out, "frailty_var") <- fv[lamlist$left] * lamlist$frac +
+        fv[lamlist$right] * (1 - lamlist$frac)
+    }
     out
   }
 
@@ -487,16 +505,53 @@ cv_jfm <- function(Data2, penalty, lambda_seq, K, initial_alpha,
     }
   }
 
-  # Batched cross-fitted score norms (one C++ call per sub-model)
-  Scorenorm_crossfit_re <- jfm_cv_scores_batch_cf_cpp(
-    tl_recur$type, tl_recur$idx, tl_recur$size,
-    Z_pseudo, alpha_array, K, subject_of_entry, cv_fold,
-    re_epi, n_re, n)
+  if (estimate_frailty) {
+    # Full model: evaluate the frailty-weighted estimating equations on the
+    # full data, each subject using the coefficients and frailty variance of
+    # the fold in which it was held out. The death baseline is solved on the
+    # full data given those coefficients and weights (it is a nuisance
+    # parameter with its own estimating equation), exactly as in the fit.
+    tl_recur_wt <- jfm_precompute_timeline_wt(entry_times, exit_times, is_last,
+                                              tr_sorted, td_sorted, 1L)
+    fold_of_entry <- cv_fold[subject_of_entry + 1L] + 1L   # 1-based
+    fold_of_subj  <- cv_fold + 1L
+    fv_mat <- do.call(cbind, lapply(theta_lambda_list, attr, "frailty_var"))
+    entries_by_fold <- lapply(seq_len(K), function(qq) which(fold_of_entry == qq))
+    Scorenorm_crossfit_re  <- numeric(n_lam)
+    Scorenorm_crossfit_cen <- numeric(n_lam)
+    for (j in seq_len(n_lam)) {
+      lp_r <- lp_d <- numeric(nrow(Z_pseudo))
+      for (qq in seq_len(K)) {
+        rows <- entries_by_fold[[qq]]
+        if (!length(rows)) next
+        lp_r[rows] <- Z_pseudo[rows, , drop = FALSE] %*% theta_lambda_list[[qq]][1:p, j]
+        lp_d[rows] <- Z_pseudo[rows, , drop = FALSE] %*%
+          theta_lambda_list[[qq]][(p + 1):(2 * p), j]
+      }
+      fw <- jfm_death_forward_score_cpp(tl_death$type, tl_death$idx, tl_death$size,
+                                        Z_pseudo, subject_of_entry, exp(lp_d),
+                                        fv_mat[j, fold_of_subj], td_sorted, n,
+                                        de_epi)
+      U_d <- fw$score / n
+      rr <- jfm_wt_score_lp_cpp(tl_recur_wt$type, tl_recur_wt$idx, tl_recur_wt$size,
+                                Z_pseudo, subject_of_entry, exp(lp_r),
+                                fw$wt_post, n_re, n, re_epi)
+      U_r <- rr$score / n
+      Scorenorm_crossfit_re[j]  <- sqrt(sum(U_r^2))
+      Scorenorm_crossfit_cen[j] <- sqrt(sum(U_d^2))
+    }
+  } else {
+    # Batched cross-fitted score norms (one C++ call per sub-model)
+    Scorenorm_crossfit_re <- jfm_cv_scores_batch_cf_cpp(
+      tl_recur$type, tl_recur$idx, tl_recur$size,
+      Z_pseudo, alpha_array, K, subject_of_entry, cv_fold,
+      re_epi, n_re, n)
 
-  Scorenorm_crossfit_cen <- jfm_cv_scores_batch_cf_cpp(
-    tl_death$type, tl_death$idx, tl_death$size,
-    Z_pseudo, beta_array, K, subject_of_entry, cv_fold,
-    de_epi, n_de, n)
+    Scorenorm_crossfit_cen <- jfm_cv_scores_batch_cf_cpp(
+      tl_death$type, tl_death$idx, tl_death$size,
+      Z_pseudo, beta_array, K, subject_of_entry, cv_fold,
+      de_epi, n_de, n)
+  }
 
   # Combined norm with scaling
   Scorenorm_crossfit <- sqrt(Scorenorm_crossfit_re^2 + (c1 * Scorenorm_crossfit_cen)^2)
